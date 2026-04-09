@@ -1,0 +1,501 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────
+
+enum Role {
+  child
+  parent
+  caregiver
+  admin
+}
+
+enum ChannelType {
+  general
+  therapy
+  school
+  medical
+}
+
+enum DossierCategory {
+  report
+  plan
+  medication
+  note
+  progress
+}
+
+enum TokenSourceType {
+  activity
+  task
+  task_step
+  exercise
+  exercise_session
+  emotion_checkin
+  morning_routine
+  bedtime_routine
+  streak
+  manual
+}
+
+enum TransactionType {
+  earned
+  redeemed
+  manual
+}
+
+enum ExerciseType {
+  multiple_choice
+  drag_drop
+  fill_in
+  memory
+  number_line
+  balance_scale
+  clock_match
+  pizza_fraction
+  step_builder
+  estimation_race
+  shop
+}
+
+enum Subject {
+  wiskunde
+  taal
+  spelling
+  lezen
+  wereldorientatie
+}
+
+enum EmotionLevel {
+  great
+  good
+  okay
+  sad
+  angry
+}
+
+// ── Users & Auth ──────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  pin         String?  // Argon2id hash, alleen voor kind
+  password    String?  // Argon2id hash, voor ouder/hulpverlener
+  role        Role
+  avatarUrl   String?
+  isActive    Boolean  @default(true)
+  totpSecret  String?  // Encrypted, voor TOTP 2FA
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Auth relaties
+  refreshTokens  RefreshToken[]
+  invitesSent    CaregiverInvite[] @relation("InvitedBy")
+  invitesReceived CaregiverInvite[] @relation("InvitedUser")
+
+  // Toegang
+  caregiverAccess CaregiverAccess[] @relation("CaregiverUser")
+  childrenAccess  CaregiverAccess[] @relation("ChildUser")
+
+  // Kind-data
+  schedules      Schedule[]
+  tasks          Task[]       @relation("ChildTasks")
+  emotionLogs    EmotionLog[]
+  tokenTransactions TokenTransaction[]
+  exerciseSessions  ExerciseSession[]
+
+  // Communicatie
+  messagesSent   Message[]    @relation("MessageAuthor")
+  channelMembers ChannelMember[]
+  messageReads   MessageRead[]
+
+  // Dossier
+  dossierEntries DossierEntry[] @relation("DossierAuthor")
+  dossierAccess  DossierEntry[] @relation("DossierVisibility")
+
+  // Ouder-data
+  tasksCreated       Task[]        @relation("ParentCreatedTasks")
+  tokenConfigsOwned  TokenConfig[] @relation("TokenConfigChild")
+  tokenConfigsCreated TokenConfig[] @relation("TokenConfigCreator")
+  rewards            Reward[]
+  auditLogs          AuditLog[]
+
+  // TRMNL
+  trmnlDevice    TrmnlDevice?
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique // SHA-256 hash van het echte token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+
+  @@map("refresh_tokens")
+}
+
+model CaregiverInvite {
+  id          String    @id @default(cuid())
+  token       String    @unique // SHA-256 hash
+  email       String
+  role        Role      @default(caregiver)
+  childId     String
+  invitedById String
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedUser User?     @relation("InvitedUser", fields: [invitedUserId], references: [id])
+  invitedUserId String? @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  modules     String[]  @default([])
+  createdAt   DateTime  @default(now())
+
+  @@map("caregiver_invites")
+}
+
+model CaregiverAccess {
+  id          String   @id @default(cuid())
+  userId      String   // hulpverlener
+  user        User     @relation("CaregiverUser", fields: [userId], references: [id], onDelete: Cascade)
+  childId     String
+  child       User     @relation("ChildUser", fields: [childId], references: [id], onDelete: Cascade)
+  modules     String[] // ["communication", "dossier", "exercises", "progress"]
+  invitedBy   String
+  invitedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+
+  @@unique([userId, childId])
+  @@map("caregiver_access")
+}
+
+// ── Dagstructuur & Taken ──────────────────────────────────────
+
+model Schedule {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int      // 0=zondag, 1=maandag, ..., 6=zaterdag
+  activities Activity[]
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, dayOfWeek])
+  @@map("schedules")
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  scheduleId      String
+  schedule        Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  title           String
+  icon            String   // naam van SVG icon of emoji
+  startTime       String   // "08:15" formaat
+  durationMinutes Int
+  color           String   @default("#7BAFA3")
+  notifyBefore    Int[]    @default([5, 1]) // minuten voor notificatie
+  sortOrder       Int      @default(0)
+  steps           ActivityStep[]
+
+  @@map("activities")
+}
+
+model ActivityStep {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  title      String
+  icon       String?
+  sortOrder  Int      @default(0)
+
+  @@map("activity_steps")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  childId     String
+  child       User     @relation("ChildTasks", fields: [childId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation("ParentCreatedTasks", fields: [createdById], references: [id])
+  title       String
+  description String?
+  icon        String?
+  durationMinutes Int?
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  sortOrder   Int      @default(0)
+  steps       TaskStep[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tasks")
+}
+
+model TaskStep {
+  id          String    @id @default(cuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  icon        String?
+  sortOrder   Int       @default(0)
+  completedAt DateTime?
+
+  @@map("task_steps")
+}
+
+// ── Beloningssysteem ─────────────────────────────────────────
+
+model TokenConfig {
+  id                    String          @id @default(cuid())
+  childId               String
+  child                 User            @relation("TokenConfigChild", fields: [childId], references: [id], onDelete: Cascade)
+  sourceType            TokenSourceType
+  sourceId              String?         // specifieke activiteit/taak ID
+  enabled               Boolean         @default(true)
+  tokensPerCompletion   Int             @default(1)
+  bonusTokens           Int?
+  createdById           String
+  createdBy             User            @relation("TokenConfigCreator", fields: [createdById], references: [id])
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Geen unique constraint op sourceId omdat null-waarden niet vergelijkbaar zijn in PostgreSQL
+  @@index([childId, sourceType])
+  @@map("token_configs")
+}
+
+model Reward {
+  id               String    @id @default(cuid())
+  childId          String
+  child            User      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  imageUrl         String?
+  costTokens       Int
+  isAvailable      Boolean   @default(true)
+  requiresApproval Boolean   @default(true)
+  category         String?
+  expiresAt        DateTime?
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  transactions     TokenTransaction[]
+
+  @@map("rewards")
+}
+
+model TokenTransaction {
+  id         String          @id @default(cuid())
+  childId    String
+  child      User            @relation(fields: [childId], references: [id], onDelete: Cascade)
+  amount     Int             // positief bij verdienen, negatief bij inwisselen
+  type       TransactionType
+  sourceType String
+  sourceId   String?
+  rewardId   String?
+  reward     Reward?         @relation(fields: [rewardId], references: [id])
+  note       String?
+  grantedById String?
+  createdAt  DateTime        @default(now())
+
+  @@map("token_transactions")
+}
+
+// ── Schooloefeningen ─────────────────────────────────────────
+
+model Exercise {
+  id           String       @id @default(cuid())
+  subject      Subject
+  type         ExerciseType
+  difficulty   Int          @default(1) // 1-5
+  title        String?
+  questionJson Json         // volledig oefening-schema
+  tags         String[]
+  isAiGenerated Boolean     @default(false)
+  isApproved    Boolean     @default(true)
+  generatedBy   String?     // "claude-haiku-3-5"
+  createdById   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  sessions     ExerciseSessionItem[]
+
+  @@map("exercises")
+}
+
+model ExerciseSession {
+  id          String   @id @default(cuid())
+  childId     String
+  child       User     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subject     Subject
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  durationSeconds Int?
+  items       ExerciseSessionItem[]
+
+  @@map("exercise_sessions")
+}
+
+model ExerciseSessionItem {
+  id          String          @id @default(cuid())
+  sessionId   String
+  session     ExerciseSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise        @relation(fields: [exerciseId], references: [id])
+  isCorrect   Boolean?
+  attempts    Int             @default(0)
+  answeredAt  DateTime?
+  timeSeconds Int?
+
+  @@map("exercise_session_items")
+}
+
+// ── Emotieregulatie ───────────────────────────────────────────
+
+model EmotionLog {
+  id        String       @id @default(cuid())
+  childId   String
+  child     User         @relation(fields: [childId], references: [id], onDelete: Cascade)
+  level     EmotionLevel
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@map("emotion_logs")
+}
+
+// ── Communicatieportaal ───────────────────────────────────────
+
+model Channel {
+  id       String      @id @default(cuid())
+  name     String
+  childId  String
+  type     ChannelType @default(general)
+  members  ChannelMember[]
+  messages Message[]
+  createdAt DateTime   @default(now())
+
+  @@map("channels")
+}
+
+model ChannelMember {
+  id        String  @id @default(cuid())
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@map("channel_members")
+}
+
+model Message {
+  id                String        @id @default(cuid())
+  channelId         String
+  channel           Channel       @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId          String
+  author            User          @relation("MessageAuthor", fields: [authorId], references: [id])
+  content           String
+  isStructuredUpdate Boolean      @default(false)
+  templateData      Json?
+  attachments       Attachment[]
+  reads             MessageRead[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("messages")
+}
+
+model MessageRead {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@map("message_reads")
+}
+
+// ── Dossier ───────────────────────────────────────────────────
+
+model DossierEntry {
+  id          String          @id @default(cuid())
+  childId     String
+  category    DossierCategory
+  title       String
+  content     String
+  authorId    String
+  author      User            @relation("DossierAuthor", fields: [authorId], references: [id])
+  visibility  User[]          @relation("DossierVisibility")
+  attachments Attachment[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("dossier_entries")
+}
+
+model Attachment {
+  id          String        @id @default(cuid())
+  filename    String
+  mimeType    String
+  storageKey  String        // MinIO object key
+  sizeBytes   Int
+  uploadedById String
+  messageId   String?
+  message     Message?      @relation(fields: [messageId], references: [id])
+  dossierId   String?
+  dossierEntry DossierEntry? @relation(fields: [dossierId], references: [id])
+  uploadedAt  DateTime      @default(now())
+
+  @@map("attachments")
+}
+
+// ── TRMNL E-Paper ────────────────────────────────────────────
+
+model TrmnlDevice {
+  id             String   @id @default(cuid())
+  childId        String   @unique
+  child          User     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  userUuid       String   @unique // TRMNL user_uuid
+  accessToken    String   // gehashed
+  screens        String[] @default(["day_overview", "tokens", "current_task"])
+  refreshMinutes Int      @default(15)
+  nightModeStart String   @default("21:00")
+  nightModeEnd   String   @default("07:00")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@map("trmnl_devices")
+}
+
+// ── Audit Log ─────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   // "user.login", "task.complete", "reward.redeem", etc.
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}

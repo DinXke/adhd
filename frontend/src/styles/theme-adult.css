@@ -1,0 +1,46 @@
+/* ══════════════════════════════════════════════════════════════
+   Volwassen-thema — "Warm Professioneel"
+   Linear.app meets Notion meets Scandinavisch kantoor
+   ══════════════════════════════════════════════════════════════ */
+
+[data-theme="adult"] {
+  /* Kleuren */
+  --bg-primary:       #FAF8F5;   /* Warm off-white */
+  --bg-card:          #FFFFFF;
+  --bg-surface:       #F3EFE9;
+  --bg-sidebar:       #2C2620;   /* Warm donkerbruin */
+  --bg-sidebar-hover: #3D352D;
+  --accent-primary:   #C17A3A;   /* Amber/cognac */
+  --accent-secondary: #7BAFA3;   /* Zelfde teal als kind */
+  --accent-token:     #F2C94C;   /* Zelfde goud */
+  --accent-success:   #5B8C5A;
+  --accent-warning:   #D4973B;
+  --accent-danger:    #C45D4C;
+  --text-primary:     #2C2620;
+  --text-muted:       #7A6F63;
+  --border-color:     #E8E0D6;
+
+  /* Typografie */
+  --font-display:     'DM Sans', 'Outfit', system-ui, sans-serif;
+  --font-body:        'DM Sans', 'Outfit', system-ui, sans-serif;
+  --font-mono:        'JetBrains Mono', monospace;
+  --font-size-body:   15px;
+  --font-size-heading: 22px;
+  --font-size-big:    32px;
+  --line-height:      1.55;
+  --letter-spacing:   0;
+
+  /* Vormen — strak maar warm */
+  --radius-soft:      12px;
+  --radius-card:      12px;
+
+  /* Knoppen */
+  --btn-radius:       8px;
+  --btn-min-height:   40px;
+  --tap-target:       40px;
+
+  /* Schaduwen */
+  --card-shadow:      none;
+  --card-border:      1px solid var(--border-color);
+  --active-glow:      0 0 0 3px rgba(193, 122, 58, 0.15);
+}

@@ -1,0 +1,45 @@
+/* ══════════════════════════════════════════════════════════════
+   Kind-thema — "Warme Speeltuin"
+   Scandinavisch kinderkamer-design, Ferm Living stijl
+   ══════════════════════════════════════════════════════════════ */
+
+[data-theme="child"] {
+  /* Kleuren */
+  --bg-primary:       #FDF6EC;
+  --bg-card:          #FFF9F0;
+  --bg-surface:       #F5E6D3;
+  --accent-primary:   #E8734A;   /* Gebrand oranje */
+  --accent-secondary: #7BAFA3;   /* Gedempte teal */
+  --accent-token:     #F2C94C;   /* Warm goud */
+  --accent-success:   #5B8C5A;   /* Bosgroen */
+  --accent-warning:   #D4973B;
+  --accent-danger:    #C45D4C;
+  --text-primary:     #3D3229;   /* Warm donkerbruin */
+  --text-muted:       #8C7B6B;
+  --border-color:     rgba(139, 109, 82, 0.12);
+  --hint-color:       #A8C5D6;
+
+  /* Typografie */
+  --font-display:     'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --font-body:        'Quicksand', 'Nunito', system-ui, sans-serif;
+  --font-mono:        'JetBrains Mono', monospace;
+  --font-size-body:   20px;
+  --font-size-heading: 30px;
+  --font-size-big:    52px;
+  --line-height:      1.65;
+  --letter-spacing:   0.01em;
+
+  /* Vormen — organisch, niet machine-generated */
+  --radius-soft:      20px;
+  --radius-card:      18px 22px 20px 24px;  /* Opzettelijk ongelijk */
+
+  /* Knoppen */
+  --btn-radius:       999px;  /* Pill-shaped */
+  --btn-min-height:   56px;
+  --tap-target:       48px;
+
+  /* Schaduwen — GEEN box-shadow op cards */
+  --card-shadow:      none;
+  --card-border:      2px solid rgba(139, 109, 82, 0.08);
+  --active-glow:      0 0 0 3px rgba(232, 115, 74, 0.15);
+}

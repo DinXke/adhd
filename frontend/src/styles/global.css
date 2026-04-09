@@ -1,0 +1,219 @@
+/* ══════════════════════════════════════════════════════════════
+   Google Fonts — preconnect in index.html
+   Baloo 2 (kind display), Quicksand (kind body), DM Sans (adult)
+   ══════════════════════════════════════════════════════════════ */
+
+@import './theme-child.css';
+@import './theme-adult.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Basis ────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--font-size-body, 16px);
+  line-height: var(--line-height, 1.5);
+  letter-spacing: var(--letter-spacing, 0);
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ── Papier-textuur overlay (beide thema's) ───────────────── */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url('/textures/paper-grain.svg');
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 9999;
+  mix-blend-mode: multiply;
+}
+
+/* ── Typografie ────────────────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+/* ── Touch targets ─────────────────────────────────────────── */
+
+button, a, [role="button"] {
+  min-height: var(--tap-target, 48px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Cards ─────────────────────────────────────────────────── */
+
+.card {
+  background-color: var(--bg-card);
+  border: var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+/* ── Knoppen — Basisstijlen ────────────────────────────────── */
+
+.btn-primary {
+  background-color: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--btn-radius);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0 1.5rem;
+  min-height: var(--btn-min-height);
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--accent-primary);
+  border: 2px solid var(--accent-primary);
+  border-radius: var(--btn-radius);
+  font-family: var(--font-display);
+  font-weight: 600;
+  padding: 0 1.5rem;
+  min-height: var(--btn-min-height);
+  transition: background-color 150ms ease-out;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(232, 115, 74, 0.06);
+}
+
+/* ── Kind-thema specifiek ──────────────────────────────────── */
+
+[data-theme="child"] .btn-primary {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-size: 1.1rem;
+}
+
+/* ── OpenDyslexic override (toggle in instellingen) ────────── */
+
+[data-dyslexic="true"] {
+  --font-display: 'OpenDyslexic', sans-serif;
+  --font-body: 'OpenDyslexic', sans-serif;
+  --letter-spacing: 0.05em;
+  --line-height: 1.85;
+}
+
+/* ── Animaties ─────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.animate-fade-in { animation: fadeIn 300ms ease-out both; }
+.animate-slide-up { animation: slideUp 350ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-pop { animation: pop 250ms ease-out both; }
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; opacity: 0.3; }
+
+/* ── Progress bar ───────────────────────────────────────────── */
+
+.progress-bar {
+  background: var(--bg-surface);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 12px;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent-token);
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Sidebar (volwassen-thema) ─────────────────────────────── */
+
+[data-theme="adult"] .sidebar {
+  background-color: var(--bg-sidebar);
+  color: #fff;
+  width: 240px;
+  flex-shrink: 0;
+}
+
+[data-theme="adult"] .sidebar-link {
+  color: rgba(255,255,255,0.7);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  transition: background-color 150ms ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+[data-theme="adult"] .sidebar-link:hover {
+  background-color: var(--bg-sidebar-hover);
+  color: #fff;
+}
+
+[data-theme="adult"] .sidebar-link.active {
+  background-color: var(--bg-sidebar-hover);
+  color: #fff;
+  border-left-color: var(--accent-primary);
+}
+
+/* ── Utility ────────────────────────────────────────────────── */
+
+.text-token { color: var(--accent-token); }
+.text-success { color: var(--accent-success); }
+.bg-accent-soft { background-color: rgba(232, 115, 74, 0.08); }

@@ -1,0 +1,106 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3080}:80"
+    depends_on:
+      - backend
+    networks:
+      - julie-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://julie:${DB_PASS}@db:5432/julieapp?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL: 900          # 15 minuten
+      JWT_REFRESH_TTL: 604800      # 7 dagen
+      HA_URL: ${HA_URL:-}
+      HA_TOKEN: ${HA_TOKEN:-}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_CONTACT: ${VAPID_CONTACT:-mailto:admin@example.com}
+      MINIO_URL: http://minio:9000
+      MINIO_USER: ${MINIO_USER:-julieapp}
+      MINIO_PASS: ${MINIO_PASS:-changeme}
+      MINIO_BUCKET: julie-files
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: 3310
+      NODE_ENV: ${NODE_ENV:-production}
+      APP_URL: ${APP_URL:-http://localhost:3080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3080}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    networks:
+      - julie-net
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: julie
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: julieapp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U julie -d julieapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - julie-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redisdata:/data
+    networks:
+      - julie-net
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-julieapp}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASS:-changeme}
+    volumes:
+      - miniodata:/data
+    networks:
+      - julie-net
+
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes:
+      - clamdata:/var/lib/clamav
+    networks:
+      - julie-net
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  clamdata:
+
+networks:
+  julie-net:
+    driver: bridge
