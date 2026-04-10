@@ -19,9 +19,12 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
 
 export function requireRole(...roles: Role[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    await requireAuth(request, reply)
-    if (reply.sent) return
-    if (!roles.includes(request.user.role)) {
+    try {
+      await request.jwtVerify()
+    } catch {
+      return reply.status(401).send({ error: 'Niet ingelogd' })
+    }
+    if (!request.user?.role || !roles.includes(request.user.role)) {
       return reply.status(403).send({ error: 'Geen toegang' })
     }
   }

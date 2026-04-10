@@ -59,7 +59,7 @@ export async function apiFetch<T = unknown>(
   let res = await fetch(path, { ...options, headers, credentials: 'include' })
 
   // 401 → probeer token te refreshen
-  if (res.status === 401 && accessToken) {
+  if (res.status === 401) {
     const newToken = await refreshToken()
     if (newToken) {
       headers.set('Authorization', `Bearer ${newToken}`)
