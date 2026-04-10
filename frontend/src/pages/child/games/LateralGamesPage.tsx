@@ -324,34 +324,46 @@ interface LRItem {
   mirror: boolean // true = needs CSS scaleX(-1)
 }
 
+// Gebruik alleen consistente emojis: pijlen (altijd correct) + handen (altijd correct)
+// SVG pijlen voor de moeilijkere niveaus (platform-onafhankelijk)
+const SVG_ARROW_LEFT = '←'
+const SVG_ARROW_RIGHT = '→'
+
 const LR_ITEMS_EASY: LRItem[] = [
-  { emoji: '\u2B05', direction: 'links', label: 'Pijl naar links', mirror: false },
-  { emoji: '\u27A1', direction: 'rechts', label: 'Pijl naar rechts', mirror: false },
-  { emoji: '\uD83D\uDC48', direction: 'links', label: 'Wijzende hand links', mirror: false },
-  { emoji: '\uD83D\uDC49', direction: 'rechts', label: 'Wijzende hand rechts', mirror: false },
+  { emoji: '⬅️', direction: 'links', label: 'Pijl', mirror: false },
+  { emoji: '➡️', direction: 'rechts', label: 'Pijl', mirror: false },
+  { emoji: '👈', direction: 'links', label: 'Hand', mirror: false },
+  { emoji: '👉', direction: 'rechts', label: 'Hand', mirror: false },
+  { emoji: '◀️', direction: 'links', label: 'Driehoek', mirror: false },
+  { emoji: '▶️', direction: 'rechts', label: 'Driehoek', mirror: false },
 ]
 
 const LR_ITEMS_MEDIUM: LRItem[] = [
-  { emoji: '\uD83D\uDC1F', direction: 'links', label: 'Vis naar links', mirror: true },
-  { emoji: '\uD83D\uDC1F', direction: 'rechts', label: 'Vis naar rechts', mirror: false },
-  { emoji: '\uD83D\uDC15', direction: 'links', label: 'Hond naar links', mirror: true },
-  { emoji: '\uD83D\uDC15', direction: 'rechts', label: 'Hond naar rechts', mirror: false },
-  { emoji: '\uD83D\uDE97', direction: 'links', label: 'Auto naar links', mirror: true },
-  { emoji: '\uD83D\uDE97', direction: 'rechts', label: 'Auto naar rechts', mirror: false },
-  { emoji: '\uD83D\uDC26', direction: 'links', label: 'Vogel naar links', mirror: true },
-  { emoji: '\uD83D\uDC26', direction: 'rechts', label: 'Vogel naar rechts', mirror: false },
+  // Gebruik een grote pijl in een gekleurde cirkel — altijd duidelijk
+  { emoji: '🔴←', direction: 'links', label: 'Rode pijl', mirror: false },
+  { emoji: '🔴→', direction: 'rechts', label: 'Rode pijl', mirror: false },
+  { emoji: '🟢←', direction: 'links', label: 'Groene pijl', mirror: false },
+  { emoji: '🟢→', direction: 'rechts', label: 'Groene pijl', mirror: false },
+  { emoji: '🔵←', direction: 'links', label: 'Blauwe pijl', mirror: false },
+  { emoji: '🔵→', direction: 'rechts', label: 'Blauwe pijl', mirror: false },
+  // Handen met kleuren
+  { emoji: '🤛', direction: 'links', label: 'Vuist', mirror: false },
+  { emoji: '🤜', direction: 'rechts', label: 'Vuist', mirror: false },
 ]
 
 const LR_ITEMS_HARD: LRItem[] = [
-  { emoji: '\uD83C\uDFC3', direction: 'links', label: 'Persoon naar links', mirror: true },
-  { emoji: '\uD83C\uDFC3', direction: 'rechts', label: 'Persoon naar rechts', mirror: false },
-  { emoji: '\uD83D\uDEB6', direction: 'links', label: 'Wandelaar naar links', mirror: true },
-  { emoji: '\uD83D\uDEB6', direction: 'rechts', label: 'Wandelaar naar rechts', mirror: false },
-  { emoji: '\uD83E\uDDD1\u200D\uD83E\uDD1D\u200D\uD83E\uDDD1', direction: 'links', label: 'Personen', mirror: true },
-  { emoji: '\uD83C\uDFC4', direction: 'links', label: 'Surfer naar links', mirror: true },
-  { emoji: '\uD83C\uDFC4', direction: 'rechts', label: 'Surfer naar rechts', mirror: false },
-  { emoji: '\uD83D\uDEB2', direction: 'links', label: 'Fietser naar links', mirror: true },
-  { emoji: '\uD83D\uDEB2', direction: 'rechts', label: 'Fietser naar rechts', mirror: false },
+  // Schoenen — links/rechts schoen is universeel
+  { emoji: '👟←', direction: 'links', label: 'Schoen', mirror: false },
+  { emoji: '👟→', direction: 'rechts', label: 'Schoen', mirror: false },
+  // Pijlen met afleiding (letter L/R)
+  { emoji: 'L ←', direction: 'links', label: 'Letter L', mirror: false },
+  { emoji: 'R →', direction: 'rechts', label: 'Letter R', mirror: false },
+  // Verwarrend: letter zegt iets anders dan de pijl
+  { emoji: 'R ←', direction: 'links', label: 'Stroop', mirror: false },
+  { emoji: 'L →', direction: 'rechts', label: 'Stroop', mirror: false },
+  // Dubbele pijlen
+  { emoji: '⟸', direction: 'links', label: 'Dubbele pijl', mirror: false },
+  { emoji: '⟹', direction: 'rechts', label: 'Dubbele pijl', mirror: false },
 ]
 
 function LinksRechts({ onBack, difficulty }: GameProps) {
@@ -471,18 +483,16 @@ function LinksRechts({ onBack, difficulty }: GameProps) {
           <AnimatePresence mode="wait">
             <motion.div
               key={`${gameKey}-${currentRound}`}
-              initial={{ opacity: 0, scale: 0.7, rotate: -10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.7 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
               className="flex items-center justify-center mb-8"
-              style={{
-                fontSize: 96,
-                transform: item.mirror ? 'scaleX(-1)' : undefined,
-                lineHeight: 1,
-              }}
+              style={{ lineHeight: 1 }}
             >
-              {item.emoji}
+              <span style={{ fontSize: 96, display: 'inline-block', transform: item.mirror ? 'scaleX(-1)' : 'none' }}>
+                {item.emoji}
+              </span>
             </motion.div>
           </AnimatePresence>
 

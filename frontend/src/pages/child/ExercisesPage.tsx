@@ -784,6 +784,13 @@ export default function ExercisesPage() {
                   sub="Spiegelbeelden, richtingen, lichaamsdelen..."
                   color="#9B7CC8"
                 />
+                <GamesLink
+                  to="/app/breinspelletjes"
+                  emoji="🧠"
+                  title="Breintraining"
+                  sub="Werkgeheugen, impulscontrole, aandacht..."
+                  color="#9B7CC8"
+                />
               </motion.div>
             )}
 
