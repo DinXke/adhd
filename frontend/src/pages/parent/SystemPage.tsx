@@ -239,7 +239,7 @@ function TrmnlPanel() {
           Wijs de plugin toe aan je apparaat in TRMNL. Klik "Forceer verversen" om te testen.
         </p>
         <div className="ml-8 flex gap-2">
-          <a href="/api/trmnl/markup" target="_blank" rel="noopener noreferrer"
+          <a href="/api/trmnl/preview-html" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm font-medium text-ink hover:bg-card">
             Preview bekijken
           </a>

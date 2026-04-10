@@ -325,19 +325,22 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
 
     const data = await buildMarkup(targetChildId!)
 
-    // TRMNL detection: heeft Authorization header, of Accept: json, of TRMNL user-agent
-    const isApiRequest = !!(
-      request.headers.authorization ||
-      request.headers.accept?.includes('application/json') ||
-      request.headers['user-agent']?.includes('TRMNL') ||
-      request.headers['content-type']?.includes('application/json')
-    )
-    if (isApiRequest) {
-      return data
-    }
+    // Altijd JSON retourneren — TRMNL verwacht dit
+    return data
+  })
 
-    // Browser preview
-    return reply.type('text/html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>GRIP TRMNL Preview</title><style>body{margin:0;padding:20px;background:#111;color:#eee;font-family:'Inter',sans-serif}.layout{background:#fff;color:#000;padding:20px;border-radius:8px;max-width:800px;margin:0 auto}.title_bar{display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:16px;padding-top:8px}.title{font-weight:bold}.item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee}.label{font-size:14px}.value{font-size:14px;font-weight:600}.tag_columns{display:flex;gap:8px;margin-top:12px}.tag{background:#f0f0f0;padding:2px 8px;border-radius:4px;font-size:12px}h2{color:#fff;text-align:center;margin-bottom:16px}.content{margin-bottom:12px}.data-list{margin-top:4px}</style></head><body><h2>GRIP TRMNL Preview</h2>${data.markup}<h2 style="margin-top:32px">Half Vertical</h2>${data.markup_half_vertical}<h2 style="margin-top:32px">Quadrant</h2>${data.markup_quadrant}</body></html>`)
+  // ── GET /api/trmnl/preview-html — Browser preview (apart pad) ──
+  fastify.get('/preview-html', async (request, reply) => {
+    const query = request.query as { child_id?: string }
+    const allChildren = await prisma.user.findMany({
+      where: { role: 'child', isActive: true },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    const childId = query.child_id || allChildren[0]?.id
+    if (!childId) return reply.type('text/html').send('<html><body><p>Geen kind</p></body></html>')
+    const data = await buildMarkup(childId)
+    return reply.type('text/html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>GRIP TRMNL Preview</title><style>body{margin:0;padding:20px;background:#111;color:#eee;font-family:sans-serif}.layout{background:#fff;color:#000;padding:20px;border-radius:8px;max-width:800px;margin:0 auto}.title_bar{display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:16px;padding-top:8px}.title{font-weight:bold}.item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee}.label{font-size:14px}.value{font-size:14px;font-weight:600}.tag_columns{display:flex;gap:8px;margin-top:12px}.tag{background:#f0f0f0;padding:2px 8px;border-radius:4px;font-size:12px}h2{color:#fff;text-align:center;margin-bottom:16px}.content{margin-bottom:12px}.data-list{margin-top:4px}</style></head><body><h2>GRIP TRMNL Preview</h2>${data.markup}<h2 style="margin-top:32px">Half Vertical</h2>${data.markup_half_vertical}<h2 style="margin-top:32px">Quadrant</h2>${data.markup_quadrant}</body></html>`)
   })
 
   // ── GET /api/trmnl/preview/:childId — Preview voor admin ─────
