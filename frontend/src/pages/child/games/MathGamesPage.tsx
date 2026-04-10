@@ -340,6 +340,12 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
   const [gameOver, setGameOver] = useState(false)
   const totalPairs = cards.length / 2
 
+  const handleSkipNumberMemory = useCallback(() => {
+    // Reveal all cards briefly, then finish
+    setCards((prev) => prev.map((c) => ({ ...c, isFlipped: true, isMatched: true })))
+    setTimeout(() => setGameOver(true), 1500)
+  }, [])
+
   const resetGame = useCallback(() => {
     setCards(generateMemoryPairs(difficulty))
     setFlippedIds([])
@@ -441,6 +447,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipNumberMemory} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <ScoreDisplay score={matches} label="Paren" />
       </div>
@@ -647,6 +654,12 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
     setGameKey((k) => k + 1)
   }, [difficulty])
 
+  const handleSkipBubblePop = useCallback(() => {
+    if (gameOver) return
+    setTimeLeft(0)
+    setGameOver(true)
+  }, [gameOver])
+
   // Timer
   useEffect(() => {
     if (gameOver) return
@@ -775,6 +788,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipBubblePop} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <ScoreDisplay score={score} />
       </div>
@@ -949,6 +963,21 @@ function DragEquation({ onBack, difficulty }: GameProps) {
   const [slotRect, setSlotRect] = useState<DOMRect | null>(null)
   const slotRef = useRef<HTMLDivElement>(null)
 
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
+
+  const handleSkipDragEquation = () => {
+    if (feedback || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      if (currentRound + 1 >= rounds.length) {
+        setGameOver(true)
+      } else {
+        setCurrentRound((r) => r + 1)
+      }
+    }, 1500)
+  }
+
   const resetGame = useCallback(() => {
     setRounds(generateDragRounds(difficulty))
     setCurrentRound(0)
@@ -957,6 +986,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
     setShowConfetti(false)
     setGameOver(false)
     setDraggedValue(null)
+    setShowSkipAnswer(false)
   }, [difficulty])
 
   const round = rounds[currentRound]
@@ -1006,9 +1036,9 @@ function DragEquation({ onBack, difficulty }: GameProps) {
     )
   }
 
-  const displayLeft = round.left !== null ? round.left : null
-  const displayRight = round.right !== null ? round.right : null
-  const displayResult = round.result !== -1 ? round.result : null
+  const displayLeft = round.left !== null ? round.left : (showSkipAnswer ? round.answer : null)
+  const displayRight = round.right !== null ? round.right : (showSkipAnswer ? round.answer : null)
+  const displayResult = round.result !== -1 ? round.result : (showSkipAnswer ? round.answer : null)
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
@@ -1023,6 +1053,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipDragEquation} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <div className="flex items-center gap-2">
           <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1362,6 +1393,22 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [gameOver, setGameOver] = useState(false)
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
+
+  const handleSkipPattern = () => {
+    if (feedback || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    setSelectedOption(round.answer)
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      setSelectedOption(null)
+      if (currentRound + 1 >= rounds.length) {
+        setGameOver(true)
+      } else {
+        setCurrentRound((r) => r + 1)
+      }
+    }, 1500)
+  }
 
   const resetGame = useCallback(() => {
     setRounds(generatePatternRounds(difficulty))
@@ -1371,12 +1418,13 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
     setSelectedOption(null)
     setShowConfetti(false)
     setGameOver(false)
+    setShowSkipAnswer(false)
   }, [difficulty])
 
   const round = rounds[currentRound]
 
   const handleAnswer = (value: number) => {
-    if (feedback) return
+    if (feedback || showSkipAnswer) return
     setSelectedOption(value)
 
     if (value === round.answer) {
@@ -1431,6 +1479,7 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipPattern} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <div className="flex items-center gap-2">
           <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1672,6 +1721,26 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
   const [showConfetti, setShowConfetti] = useState(false)
   const [gameOver, setGameOver] = useState(false)
 
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
+
+  const handleSkipFractionPizza = () => {
+    if (feedback || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    // Show the correct answer: color the first N slices
+    const correctSlices = new Set<number>()
+    for (let i = 0; i < round.numerator; i++) correctSlices.add(i)
+    setColoredSlices(correctSlices)
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      setColoredSlices(new Set())
+      if (currentRound + 1 >= allRounds.length) {
+        setGameOver(true)
+      } else {
+        setCurrentRound((r) => r + 1)
+      }
+    }, 1500)
+  }
+
   const resetGame = useCallback(() => {
     setCurrentRound(0)
     setColoredSlices(new Set())
@@ -1679,6 +1748,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
     setScore(0)
     setShowConfetti(false)
     setGameOver(false)
+    setShowSkipAnswer(false)
     setGameKey((k) => k + 1)
   }, [])
 
@@ -1686,7 +1756,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
   const radius = 130
 
   const toggleSlice = (index: number) => {
-    if (feedback) return
+    if (feedback || showSkipAnswer) return
     soundTap()
     setColoredSlices((prev) => {
       const next = new Set(prev)
@@ -1751,6 +1821,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipFractionPizza} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <div className="flex items-center gap-2">
           <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -1969,6 +2040,13 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
   const [showStreak, setShowStreak] = useState(false)
   const [totalAnswered, setTotalAnswered] = useState(0)
 
+  const handleSkipSpeedTap = useCallback(() => {
+    if (gameOver) return
+    setTimeLeft(0)
+    feedbackWin()
+    setGameOver(true)
+  }, [gameOver])
+
   const resetGame = useCallback(() => {
     setTimeLeft(MAX_TIME)
     setScore(0)
@@ -2059,6 +2137,7 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkipSpeedTap} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <ScoreDisplay score={score} />
       </div>
@@ -2184,69 +2263,42 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
 
 interface SplitProblem {
   total: number
-  prefilled: 'left' | 'right' | 'none'
-  prefilledValue: number | null
-  answerLeft: number
-  answerRight: number
-  threeWay: boolean
-  threeValues?: [number, number, number]
+  left: number
+  right: number
+  missing: 'top' | 'left' | 'right'
+  answer: number
+  options: number[]
 }
 
-function generateSplitProblem(difficulty: number, roundIndex: number): SplitProblem {
-  if (difficulty === 1) {
-    // Makkelijk: splitsen van 3-10, altijd beide leeg
-    const total = rand(3, 10)
-    const left = rand(1, total - 1)
-    return { total, prefilled: 'none', prefilledValue: null, answerLeft: left, answerRight: total - left, threeWay: false }
-  } else if (difficulty === 2) {
-    // Gemiddeld: 10-20, soms een vooraf ingevuld
-    const total = rand(10, 20)
-    const left = rand(1, total - 1)
-    const right = total - left
-    // Afwisselend: ronden 0,2,4 = beide leeg, 1,3,5 = een vooringevuld
-    if (roundIndex % 2 === 1) {
-      const side = Math.random() < 0.5 ? 'left' : 'right'
-      return {
-        total,
-        prefilled: side,
-        prefilledValue: side === 'left' ? left : right,
-        answerLeft: left,
-        answerRight: right,
-        threeWay: false,
-      }
-    }
-    return { total, prefilled: 'none', prefilledValue: null, answerLeft: left, answerRight: right, threeWay: false }
-  } else {
-    // Moeilijk: 15-30, altijd een vooringevuld, soms 3-weg split
-    const doThreeWay = roundIndex >= 6 && Math.random() < 0.4
-    if (doThreeWay) {
-      const total = rand(15, 25)
-      const a = rand(1, Math.floor(total / 3))
-      const b = rand(1, Math.floor((total - a) / 2))
-      const c = total - a - b
-      return {
-        total,
-        prefilled: 'left',
-        prefilledValue: a,
-        answerLeft: a,
-        answerRight: b,
-        threeWay: true,
-        threeValues: [a, b, c],
-      }
-    }
-    const total = rand(15, 30)
-    const left = rand(1, total - 1)
-    const right = total - left
-    const side = Math.random() < 0.5 ? 'left' : 'right'
-    return {
-      total,
-      prefilled: side,
-      prefilledValue: side === 'left' ? left : right,
-      answerLeft: left,
-      answerRight: right,
-      threeWay: false,
-    }
+function generateSplitProblem(difficulty: number, _roundIndex: number): SplitProblem {
+  const minTotal = difficulty === 1 ? 3 : difficulty === 2 ? 10 : 15
+  const maxTotal = difficulty === 1 ? 10 : difficulty === 2 ? 20 : 50
+  const total = rand(minTotal, maxTotal)
+  const left = rand(1, total - 1)
+  const right = total - left
+
+  // ~20% chance the top is missing, otherwise one of the branches
+  const missing: 'top' | 'left' | 'right' = Math.random() < 0.2 ? 'top' : Math.random() < 0.5 ? 'left' : 'right'
+  const answer = missing === 'top' ? total : missing === 'left' ? left : right
+
+  // Generate 3 distractors close to the answer
+  const distractorSet = new Set<number>()
+  const offsets = [-2, -1, 1, 2, -3, 3]
+  for (const off of shuffle(offsets)) {
+    const d = answer + off
+    if (d > 0 && d !== answer) distractorSet.add(d)
+    if (distractorSet.size >= 3) break
   }
+  // Fill up if we don't have enough
+  let fill = 1
+  while (distractorSet.size < 3) {
+    if (answer + fill !== answer && answer + fill > 0 && !distractorSet.has(answer + fill)) distractorSet.add(answer + fill)
+    if (answer - fill !== answer && answer - fill > 0 && !distractorSet.has(answer - fill)) distractorSet.add(answer - fill)
+    fill++
+  }
+
+  const options = shuffle([answer, ...Array.from(distractorSet).slice(0, 3)])
+  return { total, left, right, missing, answer, options }
 }
 
 function SplitTree({ onBack, difficulty }: GameProps) {
@@ -2256,90 +2308,67 @@ function SplitTree({ onBack, difficulty }: GameProps) {
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
   const [problem, setProblem] = useState<SplitProblem>(() => generateSplitProblem(difficulty, 0))
-  const [leftValue, setLeftValue] = useState<number | null>(null)
-  const [rightValue, setRightValue] = useState<number | null>(null)
-  const [thirdValue, setThirdValue] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [done, setDone] = useState(false)
   const [showLeaves, setShowLeaves] = useState(false)
-  const [draggedBall, setDraggedBall] = useState<number | null>(null)
-
-  // Beschikbare getallenbollen
-  const maxBall = problem.threeWay ? Math.min(problem.total, 15) : Math.min(problem.total - 1, 12)
-  const balls = useMemo(() => {
-    const arr: number[] = []
-    for (let i = 1; i <= maxBall; i++) arr.push(i)
-    return arr
-  }, [maxBall])
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
 
   // Initialiseer ronde
   useEffect(() => {
     const p = generateSplitProblem(difficulty, round)
     setProblem(p)
-    setLeftValue(p.prefilled === 'left' ? p.prefilledValue : null)
-    setRightValue(p.prefilled === 'right' ? p.prefilledValue : null)
-    setThirdValue(null)
     setFeedback(null)
     setShowLeaves(false)
-    setDraggedBall(null)
+    setShowSkipAnswer(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round, difficulty, gameKey])
 
-  // Controleer antwoord wanneer alle velden gevuld zijn
-  useEffect(() => {
-    if (feedback) return
-
-    if (problem.threeWay) {
-      // Bij 3-weg: links is vooringevuld, we moeten midden + rechts vullen
-      if (rightValue !== null && thirdValue !== null) {
-        const prefilled = problem.prefilledValue ?? 0
-        if (prefilled + rightValue + thirdValue === problem.total) {
-          handleCorrect()
-        } else {
-          handleWrong()
-        }
-      }
+  const advanceRound = () => {
+    setShowLeaves(false)
+    if (round + 1 >= TOTAL_ROUNDS) {
+      finishGame(score)
     } else {
-      const lv = leftValue
-      const rv = rightValue
-      if (lv !== null && rv !== null) {
-        if (lv + rv === problem.total) {
-          handleCorrect()
-        } else {
-          handleWrong()
-        }
-      }
+      setRound((r) => r + 1)
     }
-  }, [leftValue, rightValue, thirdValue])
+  }
 
-  const handleCorrect = () => {
-    feedbackCorrect()
-    soundMatch()
-    setFeedback('correct')
-    setShowLeaves(true)
-    setScore((s) => s + 1)
-    if (navigator.vibrate) navigator.vibrate(30)
+  const handleAnswer = (value: number) => {
+    if (feedback || showSkipAnswer) return
+    if (value === problem.answer) {
+      feedbackCorrect()
+      soundMatch()
+      setFeedback('correct')
+      setShowLeaves(true)
+      setScore((s) => s + 1)
+      if (navigator.vibrate) navigator.vibrate(30)
+      setTimeout(() => {
+        setShowLeaves(false)
+        if (round + 1 >= TOTAL_ROUNDS) {
+          finishGame(score + 1)
+        } else {
+          setRound((r) => r + 1)
+        }
+      }, 1200)
+    } else {
+      soundWrong()
+      setFeedback('wrong')
+      if (navigator.vibrate) navigator.vibrate([50, 30, 50])
+      setTimeout(() => {
+        setFeedback(null)
+      }, 800)
+    }
+  }
+
+  const handleSkip = () => {
+    if (feedback || showSkipAnswer) return
+    setShowSkipAnswer(true)
     setTimeout(() => {
-      setShowLeaves(false)
       if (round + 1 >= TOTAL_ROUNDS) {
-        finishGame(score + 1)
+        finishGame(score)
       } else {
         setRound((r) => r + 1)
       }
-    }, 1200)
-  }
-
-  const handleWrong = () => {
-    soundWrong()
-    setFeedback('wrong')
-    if (navigator.vibrate) navigator.vibrate([50, 30, 50])
-    setTimeout(() => {
-      // Reset alleen de niet-vooringevulde velden
-      if (problem.prefilled !== 'left') setLeftValue(null)
-      if (problem.prefilled !== 'right') setRightValue(null)
-      setThirdValue(null)
-      setFeedback(null)
-    }, 800)
+    }, 1500)
   }
 
   const finishGame = async (finalScore: number) => {
@@ -2360,21 +2389,6 @@ function SplitTree({ onBack, difficulty }: GameProps) {
     setGameKey((k) => k + 1)
   }, [])
 
-  const handleDropOnCircle = (target: 'left' | 'right' | 'third') => {
-    if (feedback || draggedBall === null) return
-    if (target === 'left' && problem.prefilled !== 'left' && leftValue === null) {
-      soundDrop()
-      setLeftValue(draggedBall)
-    } else if (target === 'right' && problem.prefilled !== 'right' && rightValue === null) {
-      soundDrop()
-      setRightValue(draggedBall)
-    } else if (target === 'third' && problem.threeWay && thirdValue === null) {
-      soundDrop()
-      setThirdValue(draggedBall)
-    }
-    setDraggedBall(null)
-  }
-
   if (done) {
     return (
       <GameEndScreen
@@ -2388,16 +2402,13 @@ function SplitTree({ onBack, difficulty }: GameProps) {
     )
   }
 
-  // Bepaal welke cirkels leeg of gevuld zijn
-  const leftEmpty = leftValue === null && problem.prefilled !== 'left'
-  const rightEmpty = rightValue === null && problem.prefilled !== 'right'
-  const leftDisplay = problem.prefilled === 'left' ? problem.prefilledValue : leftValue
-  const rightDisplay = problem.prefilled === 'right' ? problem.prefilledValue : rightValue
-  const thirdDisplay = thirdValue
+  // Determine display values for the tree circles
+  const topDisplay = problem.missing === 'top' ? (showSkipAnswer || feedback === 'correct' ? problem.total : null) : problem.total
+  const leftDisplay = problem.missing === 'left' ? (showSkipAnswer || feedback === 'correct' ? problem.left : null) : problem.left
+  const rightDisplay = problem.missing === 'right' ? (showSkipAnswer || feedback === 'correct' ? problem.right : null) : problem.right
 
-  // SVG boom dimensies
   const treeW = 300
-  const treeH = problem.threeWay ? 260 : 220
+  const treeH = 220
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
@@ -2410,6 +2421,7 @@ function SplitTree({ onBack, difficulty }: GameProps) {
         >
           {'\u2190'} Terug
         </button>
+        <button onClick={handleSkip} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
         <MuteButton />
         <div className="text-center flex-1">
           <p className="font-display font-bold text-ink" style={{ fontSize: 16 }}>Splitsboom</p>
@@ -2429,18 +2441,8 @@ function SplitTree({ onBack, difficulty }: GameProps) {
           <line x1={150} y1={55} x2={150} y2={100} stroke="#8C7B6B" strokeWidth={8} strokeLinecap="round" />
 
           {/* Takken */}
-          {!problem.threeWay ? (
-            <>
-              <line x1={150} y1={100} x2={75} y2={170} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
-              <line x1={150} y1={100} x2={225} y2={170} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
-            </>
-          ) : (
-            <>
-              <line x1={150} y1={100} x2={55} y2={190} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
-              <line x1={150} y1={100} x2={150} y2={195} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
-              <line x1={150} y1={100} x2={245} y2={190} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
-            </>
-          )}
+          <line x1={150} y1={100} x2={75} y2={170} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
+          <line x1={150} y1={100} x2={225} y2={170} stroke="#8C7B6B" strokeWidth={6} strokeLinecap="round" />
 
           {/* Blaadjes animatie bij goed antwoord */}
           {showLeaves && (
@@ -2472,136 +2474,71 @@ function SplitTree({ onBack, difficulty }: GameProps) {
             cx={150}
             cy={38}
             r={32}
-            fill={feedback === 'correct' ? '#5B8C5A' : '#E8734A'}
-            stroke="white"
+            fill={problem.missing === 'top' && topDisplay === null ? '#FFF9F0' : feedback === 'correct' || showSkipAnswer ? '#5B8C5A' : '#E8734A'}
+            stroke={problem.missing === 'top' && topDisplay === null ? '#E8E0D6' : 'white'}
             strokeWidth={3}
+            strokeDasharray={problem.missing === 'top' && topDisplay === null ? '6 4' : 'none'}
           />
           <text
             x={150}
             y={40}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="white"
-            fontSize={problem.total >= 10 ? 22 : 26}
+            fill={problem.missing === 'top' && topDisplay === null ? '#8C7B6B' : 'white'}
+            fontSize={topDisplay !== null && topDisplay >= 10 ? 22 : 26}
             fontWeight={700}
             fontFamily="var(--font-display)"
           >
-            {problem.total}
+            {topDisplay !== null ? topDisplay : '?'}
           </text>
 
-          {/* Onderste cirkels */}
-          {!problem.threeWay ? (
-            <>
-              {/* Links */}
-              <circle
-                cx={75}
-                cy={185}
-                r={30}
-                fill={leftEmpty ? '#FFF9F0' : feedback === 'correct' ? '#5B8C5A' : '#7BAFA3'}
-                stroke={leftEmpty ? '#E8E0D6' : 'white'}
-                strokeWidth={leftEmpty ? 2.5 : 3}
-                strokeDasharray={leftEmpty ? '6 4' : 'none'}
-                onClick={() => handleDropOnCircle('left')}
-                style={{ cursor: leftEmpty && draggedBall !== null ? 'pointer' : 'default' }}
-              />
-              <text
-                x={75}
-                y={187}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill={leftEmpty ? '#8C7B6B' : 'white'}
-                fontSize={leftDisplay !== null && leftDisplay >= 10 ? 20 : 24}
-                fontWeight={700}
-                fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none' }}
-              >
-                {leftDisplay !== null ? leftDisplay : '?'}
-              </text>
+          {/* Links */}
+          <circle
+            cx={75}
+            cy={185}
+            r={30}
+            fill={problem.missing === 'left' && leftDisplay === null ? '#FFF9F0' : feedback === 'correct' || showSkipAnswer ? '#5B8C5A' : '#7BAFA3'}
+            stroke={problem.missing === 'left' && leftDisplay === null ? '#E8E0D6' : 'white'}
+            strokeWidth={problem.missing === 'left' && leftDisplay === null ? 2.5 : 3}
+            strokeDasharray={problem.missing === 'left' && leftDisplay === null ? '6 4' : 'none'}
+          />
+          <text
+            x={75}
+            y={187}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={problem.missing === 'left' && leftDisplay === null ? '#8C7B6B' : 'white'}
+            fontSize={leftDisplay !== null && leftDisplay >= 10 ? 20 : 24}
+            fontWeight={700}
+            fontFamily="var(--font-display)"
+            style={{ pointerEvents: 'none' }}
+          >
+            {leftDisplay !== null ? leftDisplay : '?'}
+          </text>
 
-              {/* Rechts */}
-              <circle
-                cx={225}
-                cy={185}
-                r={30}
-                fill={rightEmpty ? '#FFF9F0' : feedback === 'correct' ? '#5B8C5A' : '#7BAFA3'}
-                stroke={rightEmpty ? '#E8E0D6' : 'white'}
-                strokeWidth={rightEmpty ? 2.5 : 3}
-                strokeDasharray={rightEmpty ? '6 4' : 'none'}
-                onClick={() => handleDropOnCircle('right')}
-                style={{ cursor: rightEmpty && draggedBall !== null ? 'pointer' : 'default' }}
-              />
-              <text
-                x={225}
-                y={187}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fill={rightEmpty ? '#8C7B6B' : 'white'}
-                fontSize={rightDisplay !== null && rightDisplay >= 10 ? 20 : 24}
-                fontWeight={700}
-                fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none' }}
-              >
-                {rightDisplay !== null ? rightDisplay : '?'}
-              </text>
-            </>
-          ) : (
-            <>
-              {/* 3-weg: links (vooringevuld), midden, rechts */}
-              {/* Links */}
-              <circle cx={55} cy={205} r={28} fill="#7BAFA3" stroke="white" strokeWidth={3} />
-              <text
-                x={55} y={207} textAnchor="middle" dominantBaseline="central"
-                fill="white" fontSize={20} fontWeight={700} fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none' }}
-              >
-                {problem.prefilledValue}
-              </text>
-
-              {/* Midden */}
-              <circle
-                cx={150}
-                cy={210}
-                r={28}
-                fill={rightValue !== null ? (feedback === 'correct' ? '#5B8C5A' : '#7BAFA3') : '#FFF9F0'}
-                stroke={rightValue !== null ? 'white' : '#E8E0D6'}
-                strokeWidth={rightValue !== null ? 3 : 2.5}
-                strokeDasharray={rightValue === null ? '6 4' : 'none'}
-                onClick={() => handleDropOnCircle('right')}
-                style={{ cursor: rightValue === null && draggedBall !== null ? 'pointer' : 'default' }}
-              />
-              <text
-                x={150} y={212} textAnchor="middle" dominantBaseline="central"
-                fill={rightValue !== null ? 'white' : '#8C7B6B'}
-                fontSize={rightDisplay !== null && rightDisplay >= 10 ? 18 : 22}
-                fontWeight={700} fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none' }}
-              >
-                {rightDisplay !== null ? rightDisplay : '?'}
-              </text>
-
-              {/* Rechts */}
-              <circle
-                cx={245}
-                cy={205}
-                r={28}
-                fill={thirdValue !== null ? (feedback === 'correct' ? '#5B8C5A' : '#7BAFA3') : '#FFF9F0'}
-                stroke={thirdValue !== null ? 'white' : '#E8E0D6'}
-                strokeWidth={thirdValue !== null ? 3 : 2.5}
-                strokeDasharray={thirdValue === null ? '6 4' : 'none'}
-                onClick={() => handleDropOnCircle('third')}
-                style={{ cursor: thirdValue === null && draggedBall !== null ? 'pointer' : 'default' }}
-              />
-              <text
-                x={245} y={207} textAnchor="middle" dominantBaseline="central"
-                fill={thirdValue !== null ? 'white' : '#8C7B6B'}
-                fontSize={thirdDisplay !== null && thirdDisplay >= 10 ? 18 : 22}
-                fontWeight={700} fontFamily="var(--font-display)"
-                style={{ pointerEvents: 'none' }}
-              >
-                {thirdDisplay !== null ? thirdDisplay : '?'}
-              </text>
-            </>
-          )}
+          {/* Rechts */}
+          <circle
+            cx={225}
+            cy={185}
+            r={30}
+            fill={problem.missing === 'right' && rightDisplay === null ? '#FFF9F0' : feedback === 'correct' || showSkipAnswer ? '#5B8C5A' : '#7BAFA3'}
+            stroke={problem.missing === 'right' && rightDisplay === null ? '#E8E0D6' : 'white'}
+            strokeWidth={problem.missing === 'right' && rightDisplay === null ? 2.5 : 3}
+            strokeDasharray={problem.missing === 'right' && rightDisplay === null ? '6 4' : 'none'}
+          />
+          <text
+            x={225}
+            y={187}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={problem.missing === 'right' && rightDisplay === null ? '#8C7B6B' : 'white'}
+            fontSize={rightDisplay !== null && rightDisplay >= 10 ? 20 : 24}
+            fontWeight={700}
+            fontFamily="var(--font-display)"
+            style={{ pointerEvents: 'none' }}
+          >
+            {rightDisplay !== null ? rightDisplay : '?'}
+          </text>
         </svg>
 
         {/* Hint bij fout */}
@@ -2614,60 +2551,45 @@ function SplitTree({ onBack, difficulty }: GameProps) {
               className="text-center font-body text-sm rounded-2xl px-4 py-2 w-full"
               style={{ background: 'rgba(168,197,214,0.2)', color: 'var(--text-primary)' }}
             >
-              De getallen moeten samen {problem.total} maken. Probeer opnieuw!
+              {problem.missing === 'top'
+                ? `${problem.left} + ${problem.right} = ?`
+                : `De getallen moeten samen ${problem.total} maken.`} Probeer opnieuw!
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Getallenbolletjes om te selecteren */}
-        <div className="w-full">
+        {/* Antwoordknoppen */}
+        <div className="w-full max-w-sm">
           <p className="font-body font-semibold text-xs mb-2 text-center" style={{ color: 'var(--text-muted)' }}>
-            Tik op een getal, dan op een lege cirkel
+            Welk getal past op de ?
           </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {balls.map((n) => (
-              <motion.button
-                key={n}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => {
-                  if (feedback) return
-                  soundTap()
-                  if (draggedBall === n) {
-                    setDraggedBall(null)
-                  } else {
-                    setDraggedBall(n)
-                    // Auto-plaats als er maar een leeg veld is
-                    if (!problem.threeWay) {
-                      if (leftEmpty && !rightEmpty && leftValue === null) {
-                        soundDrop()
-                        setLeftValue(n)
-                        setDraggedBall(null)
-                        return
-                      }
-                      if (rightEmpty && !leftEmpty && rightValue === null) {
-                        soundDrop()
-                        setRightValue(n)
-                        setDraggedBall(null)
-                        return
-                      }
-                    }
-                  }
-                }}
-                className="flex items-center justify-center font-display font-bold rounded-full"
-                style={{
-                  width: 48,
-                  height: 48,
-                  minWidth: 48,
-                  fontSize: n >= 10 ? 16 : 20,
-                  background: draggedBall === n ? 'var(--accent-primary)' : 'var(--bg-card)',
-                  color: draggedBall === n ? 'white' : 'var(--text-primary)',
-                  border: `2px solid ${draggedBall === n ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {n}
-              </motion.button>
-            ))}
+          <div className="grid grid-cols-2 gap-3">
+            {problem.options.map((opt, i) => {
+              const isCorrectOpt = opt === problem.answer
+              const showAsCorrect = (feedback === 'correct' || showSkipAnswer) && isCorrectOpt
+              return (
+                <motion.button
+                  key={`${round}-${i}`}
+                  whileTap={{ scale: 0.93 }}
+                  animate={feedback === 'wrong' && !isCorrectOpt ? { x: [0, -4, 4, -4, 0] } : {}}
+                  transition={{ duration: 0.3 }}
+                  onClick={() => handleAnswer(opt)}
+                  className="flex items-center justify-center font-display font-bold rounded-2xl"
+                  style={{
+                    height: 64,
+                    fontSize: opt >= 10 ? 24 : 28,
+                    background: showAsCorrect ? 'var(--accent-success)' : 'var(--bg-card)',
+                    color: showAsCorrect ? 'white' : 'var(--text-primary)',
+                    border: `2px solid ${showAsCorrect ? 'var(--accent-success)' : 'var(--border-color)'}`,
+                    transition: 'background 0.2s, color 0.2s',
+                    opacity: feedback || showSkipAnswer ? 0.7 : 1,
+                    pointerEvents: feedback || showSkipAnswer ? 'none' : 'auto',
+                  }}
+                >
+                  {opt}
+                </motion.button>
+              )
+            })}
           </div>
         </div>
       </div>

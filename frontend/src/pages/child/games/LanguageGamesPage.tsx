@@ -94,19 +94,19 @@ const WORDSEARCH_THEMES: Record<string, { label: string; words: string[] }> = {
 }
 
 // Letter-memory combinaties
-const LETTER_COMBOS: { combo: string; word: string; emoji: string }[] = [
-  { combo: 'oe', word: 'boek', emoji: '📚' },
-  { combo: 'ie', word: 'brief', emoji: '✉️' },
-  { combo: 'ei', word: 'ei', emoji: '🥚' },
-  { combo: 'au', word: 'auto', emoji: '🚗' },
-  { combo: 'ou', word: 'goud', emoji: '🪙' },
-  { combo: 'eu', word: 'neus', emoji: '👃' },
-  { combo: 'ui', word: 'huis', emoji: '🏠' },
-  { combo: 'ij', word: 'bij', emoji: '🐝' },
-  { combo: 'aa', word: 'maan', emoji: '🌙' },
-  { combo: 'oo', word: 'boom', emoji: '🌳' },
-  { combo: 'ee', word: 'been', emoji: '🦵' },
-  { combo: 'uu', word: 'vuur', emoji: '🔥' },
+const LETTER_COMBOS: { combo: string; word: string; emoji: string; blanked: string }[] = [
+  { combo: 'oe', word: 'boek', emoji: '📚', blanked: 'b__k' },
+  { combo: 'ie', word: 'brief', emoji: '✉️', blanked: 'br__f' },
+  { combo: 'ei', word: 'ei', emoji: '🥚', blanked: '__' },
+  { combo: 'au', word: 'auto', emoji: '🚗', blanked: '__to' },
+  { combo: 'ou', word: 'goud', emoji: '🪙', blanked: 'g__d' },
+  { combo: 'eu', word: 'neus', emoji: '👃', blanked: 'n__s' },
+  { combo: 'ui', word: 'huis', emoji: '🏠', blanked: 'h__s' },
+  { combo: 'ij', word: 'bij', emoji: '🐝', blanked: 'b__' },
+  { combo: 'aa', word: 'maan', emoji: '🌙', blanked: 'm__n' },
+  { combo: 'oo', word: 'boom', emoji: '🌳', blanked: 'b__m' },
+  { combo: 'ee', word: 'been', emoji: '🦵', blanked: 'b__n' },
+  { combo: 'uu', word: 'vuur', emoji: '🔥', blanked: 'v__r' },
 ]
 
 // Zinnen per moeilijkheidsgraad
@@ -278,12 +278,14 @@ function GameHeader({
   totalRounds,
   score,
   onBack,
+  onSkip,
 }: {
   title: string
   round?: number
   totalRounds?: number
   score?: number
   onBack: () => void
+  onSkip?: () => void
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-2 flex-shrink-0" style={{ background: 'var(--bg-primary)' }}>
@@ -295,6 +297,9 @@ function GameHeader({
       >
         {'\u2190'} Terug
       </motion.button>
+      {onSkip ? (
+        <button onClick={onSkip} className="text-xs font-body underline" style={{ color: 'var(--text-muted)' }}>Overslaan {'\u2192'}</button>
+      ) : null}
       <MuteButton />
       <div className="text-center flex-1">
         <h2 className="font-display font-bold text-ink" style={{ fontSize: 16 }}>{title}</h2>
@@ -434,6 +439,7 @@ function WordScramble({
   const [done, setDone] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [tokensEarned, setTokensEarned] = useState(0)
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentWord = words[round] || ''
@@ -517,6 +523,21 @@ function WordScramble({
     [placed, correct],
   )
 
+  const handleSkipWordScramble = () => {
+    if (correct || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    setPlaced(currentWord.split(''))
+    setAvailable([])
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      if (round + 1 >= TOTAL_ROUNDS) {
+        finishGame(score)
+      } else {
+        setRound((r) => r + 1)
+      }
+    }, 1500)
+  }
+
   const finishGame = async (finalScore: number) => {
     soundWin()
     const tokens = Math.max(1, Math.round((finalScore / TOTAL_ROUNDS) * 3))
@@ -545,7 +566,7 @@ function WordScramble({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      <GameHeader title="Woordpuzzel" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
+      <GameHeader title="Woordpuzzel" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipWordScramble} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
       <div className="flex-1 overflow-auto flex flex-col items-center justify-center px-5 pb-8 gap-6">
@@ -822,6 +843,14 @@ function WordSearch({
     setSelecting([])
   }, [selecting, grid, placedWords, found])
 
+  const handleSkipWordSearch = () => {
+    // Reveal all remaining words and finish
+    setFound([...placedWords])
+    setTimeout(() => {
+      finishGame(found.length)
+    }, 1500)
+  }
+
   const finishGame = async (finalFound: number) => {
     const tokens = Math.max(1, Math.round((finalFound / placedWords.length) * 3))
     setTokensEarned(tokens)
@@ -855,7 +884,7 @@ function WordSearch({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      <GameHeader title={`Woordzoeker — ${theme.label}`} score={found.length} onBack={onBack} />
+      <GameHeader title={`Woordzoeker — ${theme.label}`} score={found.length} onBack={onBack} onSkip={handleSkipWordSearch} />
 
       <div className="flex-1 overflow-auto">
       {/* Woordenlijst */}
@@ -937,6 +966,7 @@ interface MemoryCard {
   combo: string
   emoji: string
   word: string
+  blanked: string
   pairId: number
   type: 'combo' | 'word'
 }
@@ -958,8 +988,8 @@ function LetterMemory({
     const combos = pick(LETTER_COMBOS, pairCount)
     const pairs: MemoryCard[] = []
     combos.forEach((c, i) => {
-      pairs.push({ id: i * 2, combo: c.combo, emoji: c.emoji, word: c.word, pairId: i, type: 'combo' })
-      pairs.push({ id: i * 2 + 1, combo: c.combo, emoji: c.emoji, word: c.word, pairId: i, type: 'word' })
+      pairs.push({ id: i * 2, combo: c.combo, emoji: c.emoji, word: c.word, blanked: c.blanked, pairId: i, type: 'combo' })
+      pairs.push({ id: i * 2 + 1, combo: c.combo, emoji: c.emoji, word: c.word, blanked: c.blanked, pairId: i, type: 'word' })
     })
     return shuffle(pairs)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1013,6 +1043,16 @@ function LetterMemory({
     [flipped, matched, cards],
   )
 
+  const handleSkipLetterMemory = () => {
+    // Reveal all remaining unmatched cards briefly, then finish
+    const allIds = cards.map((c) => c.id)
+    setFlipped(allIds)
+    setTimeout(() => {
+      setMatched(allIds)
+      finishGame(matched.length / 2)
+    }, 1500)
+  }
+
   const finishGame = async (totalPairs: number) => {
     // Minder pogingen = meer tokens
     const efficiency = totalPairs / Math.max(attempts + 1, totalPairs)
@@ -1044,10 +1084,10 @@ function LetterMemory({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      <GameHeader title="Letter Memory" onBack={onBack} />
+      <GameHeader title="Letter Memory" onBack={onBack} onSkip={handleSkipLetterMemory} />
       <div className="flex-1 overflow-auto px-4 pb-4">
       <p className="text-center font-body text-ink-muted text-sm mb-3">
-        Zoek de paren: lettercombinatie + woord
+        Zoek de paren: lettercombinatie + woord met ontbrekende letters
       </p>
 
       <div
@@ -1101,7 +1141,7 @@ function LetterMemory({
                     ) : (
                       <>
                         <span className="text-2xl mb-0.5">{card.emoji}</span>
-                        <span style={{ fontSize: 'clamp(11px, 3vw, 15px)' }}>{card.word}</span>
+                        <span style={{ fontSize: 'clamp(11px, 3vw, 15px)', letterSpacing: '0.05em' }}>{card.blanked}</span>
                       </>
                     )}
                   </>
@@ -1140,6 +1180,7 @@ function SentenceBuilder({
   const [showSuccess, setShowSuccess] = useState(false)
   const [done, setDone] = useState(false)
   const [tokensEarned, setTokensEarned] = useState(0)
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
 
   const currentSentence = allSentences[round] || ''
   const targetWords = currentSentence.split(' ')
@@ -1202,6 +1243,21 @@ function SentenceBuilder({
     [placed, correct],
   )
 
+  const handleSkipSentenceBuilder = () => {
+    if (correct || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    setPlaced(targetWords)
+    setAvailable([])
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      if (round + 1 >= TOTAL_ROUNDS) {
+        finishGame(score)
+      } else {
+        setRound((r) => r + 1)
+      }
+    }, 1500)
+  }
+
   const finishGame = async (finalScore: number) => {
     const tokens = Math.max(1, Math.round((finalScore / TOTAL_ROUNDS) * 3))
     setTokensEarned(tokens)
@@ -1229,7 +1285,7 @@ function SentenceBuilder({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      <GameHeader title="Zinnen bouwen" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
+      <GameHeader title="Zinnen bouwen" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipSentenceBuilder} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
       <div className="flex-1 overflow-auto flex flex-col px-5 pb-8 gap-5 pt-4">
@@ -1344,6 +1400,7 @@ function SpellingBee({
   const [showSuccess, setShowSuccess] = useState(false)
   const [done, setDone] = useState(false)
   const [tokensEarned, setTokensEarned] = useState(0)
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
 
   const current = wordList[round]
   const target = current?.word || ''
@@ -1414,6 +1471,22 @@ function SpellingBee({
     }
   }
 
+  const handleSkipSpellingBee = () => {
+    if (correct || showSkipAnswer) return
+    setShowSkipAnswer(true)
+    setInput(target.split(''))
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      if (round + 1 >= TOTAL_ROUNDS) {
+        finishGame(score)
+      } else {
+        setRound((r) => r + 1)
+        setInput([])
+        setCorrect(false)
+      }
+    }, 1500)
+  }
+
   const finishGame = async (finalScore: number) => {
     const tokens = Math.max(1, Math.round((finalScore / TOTAL_ROUNDS) * 3))
     setTokensEarned(tokens)
@@ -1450,7 +1523,7 @@ function SpellingBee({
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
-      <GameHeader title="Spellingbij" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
+      <GameHeader title="Spellingbij" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipSpellingBee} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
       <div className="flex-1 overflow-auto flex flex-col items-center justify-center px-4 pt-2 gap-3" style={{ paddingBottom: 180 }}>
@@ -1608,6 +1681,7 @@ function CategorySort({
   const [done, setDone] = useState(false)
   const [tokensEarned, setTokensEarned] = useState(0)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showSkipAnswer, setShowSkipAnswer] = useState(false)
 
   const currentWord = allWords[currentIdx]
   const total = allWords.length
@@ -1646,6 +1720,24 @@ function CategorySort({
     [currentWord, feedback, currentIdx, total, score],
   )
 
+  const handleSkipCategorySort = () => {
+    if (feedback || showSkipAnswer || !currentWord) return
+    setShowSkipAnswer(true)
+    // Show correct category briefly
+    setSorted((prev) => ({
+      ...prev,
+      [currentWord.category]: [...(prev[currentWord.category] || []), currentWord.word],
+    }))
+    setTimeout(() => {
+      setShowSkipAnswer(false)
+      if (currentIdx + 1 >= total) {
+        finishGame(score)
+      } else {
+        setCurrentIdx((i) => i + 1)
+      }
+    }, 1500)
+  }
+
   const finishGame = async (finalScore: number) => {
     const tokens = Math.max(1, Math.round((finalScore / total) * 3))
     setTokensEarned(tokens)
@@ -1680,6 +1772,7 @@ function CategorySort({
         totalRounds={total}
         score={score}
         onBack={onBack}
+        onSkip={handleSkipCategorySort}
       />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
@@ -1952,6 +2045,14 @@ function WordCircle({
     }
   }, [isDragging, selectedIndices, puzzle, foundWords, totalWords])
 
+  const handleSkipWordCircle = () => {
+    // Reveal all remaining words and finish
+    setFoundWords([...puzzle.words])
+    setTimeout(() => {
+      finishGame(foundWords.length)
+    }, 1500)
+  }
+
   const finishGame = async (finalScore: number) => {
     const tokens = Math.max(1, Math.round((finalScore / totalWords) * 3))
     setTokensEarned(tokens)
@@ -1983,6 +2084,7 @@ function WordCircle({
         title="Woordcirkel"
         score={foundWords.length}
         onBack={onBack}
+        onSkip={handleSkipWordCircle}
       />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
