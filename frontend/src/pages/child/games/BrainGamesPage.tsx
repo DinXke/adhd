@@ -814,8 +814,8 @@ const STROOP_COLORS: { word: string; hex: string }[] = [
 function KleurWar({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
   const TOTAL_TRIALS = 20
-  // Easy = all congruent, Medium = 50% incongruent, Hard = 80% incongruent
-  const incongruentRatio = difficulty === 1 ? 0 : difficulty === 2 ? 0.5 : 0.8
+  // Easy = 30% incongruent, Medium = 60%, Hard = 85%
+  const incongruentRatio = difficulty === 1 ? 0.3 : difficulty === 2 ? 0.6 : 0.85
 
   const trials = useMemo(() => {
     const result: { word: string; inkColor: { word: string; hex: string }; options: { word: string; hex: string }[] }[] = []
@@ -1279,8 +1279,8 @@ function ReeksOnthoud({ onBack, difficulty }: GameProps) {
 function VisVanger({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
   const TOTAL_TRIALS = 20
-  // Easy = all congruent, Medium = 50% incongruent, Hard = 80% incongruent
-  const incongruentRatio = difficulty === 1 ? 0 : difficulty === 2 ? 0.5 : 0.8
+  // Easy = 30% incongruent, Medium = 60%, Hard = 85%
+  const incongruentRatio = difficulty === 1 ? 0.3 : difficulty === 2 ? 0.6 : 0.85
 
   const trials = useMemo(() => {
     const result: { middleDir: 'left' | 'right'; flankerDir: 'left' | 'right'; isCongruent: boolean }[] = []
@@ -1413,19 +1413,20 @@ function VisVanger({ onBack, difficulty }: GameProps) {
             {[0, 1, 2, 3, 4].map((pos) => {
               const isMiddle = pos === 2
               const dir = isMiddle ? currentTrial.middleDir : currentTrial.flankerDir
+              const s = isMiddle ? fishSize + 12 : fishSize
               return (
-                <span
-                  key={pos}
-                  style={{
-                    fontSize: isMiddle ? fishSize + 12 : fishSize,
-                    transform: dir === 'left' ? 'scaleX(-1)' : 'none',
-                    display: 'inline-block',
-                    opacity: isMiddle ? 1 : 0.7,
-                    filter: isMiddle ? 'drop-shadow(0 0 8px rgba(155,124,200,0.5))' : 'none',
-                  }}
-                >
-                  {'\uD83D\uDC1F'}
-                </span>
+                <svg key={pos} width={s} height={s} viewBox="0 0 40 40"
+                  style={{ opacity: isMiddle ? 1 : 0.65, filter: isMiddle ? 'drop-shadow(0 0 6px rgba(155,124,200,0.5))' : 'none' }}>
+                  <g transform={`translate(20,20)${dir === 'left' ? ' scale(-1,1)' : ''}`}>
+                    {/* Vis lichaam */}
+                    <ellipse cx="2" cy="0" rx="14" ry="9" fill={isMiddle ? '#9B7CC8' : '#7BAFA3'} />
+                    {/* Staart */}
+                    <polygon points="-14,-8 -22,0 -14,8" fill={isMiddle ? '#7B5CBB' : '#5B9C8A'} />
+                    {/* Oog */}
+                    <circle cx="10" cy="-2" r="2.5" fill="white" />
+                    <circle cx="11" cy="-2" r="1.2" fill="#333" />
+                  </g>
+                </svg>
               )
             })}
           </motion.div>

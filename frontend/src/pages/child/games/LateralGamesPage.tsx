@@ -318,52 +318,128 @@ interface GameProps {
 // ═══════════════════════════════════════════════════════════════
 
 interface LRItem {
-  emoji: string
   direction: 'links' | 'rechts'
   label: string
-  mirror: boolean // true = needs CSS scaleX(-1)
+  color: string
+  shape: 'arrow' | 'hand' | 'triangle' | 'car' | 'stroop'
+  stroopText?: string // Voor stroop-items: misleidende tekst
 }
 
-// Gebruik alleen consistente emojis: pijlen (altijd correct) + handen (altijd correct)
-// SVG pijlen voor de moeilijkere niveaus (platform-onafhankelijk)
-const SVG_ARROW_LEFT = '←'
-const SVG_ARROW_RIGHT = '→'
+// SVG renderer — 100% platform-onafhankelijk, geen emoji's
+function LRShape({ item, size = 96 }: { item: LRItem; size?: number }) {
+  const isLeft = item.direction === 'links'
+  const flip = isLeft ? '' : ' scale(-1,1)'
+  const cx = size / 2
+
+  if (item.shape === 'stroop') {
+    // Tekst zegt iets anders dan de pijl
+    return (
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: size * 0.3, fontWeight: 800, color: item.color, fontFamily: 'var(--font-display)' }}>
+          {item.stroopText}
+        </div>
+        <svg width={size} height={size * 0.5} viewBox={`0 0 ${size} ${size * 0.5}`}>
+          <polygon
+            points={`${isLeft ? 10 : size - 10},${size * 0.25} ${isLeft ? size - 10 : 10},${size * 0.1} ${isLeft ? size - 10 : 10},${size * 0.4}`}
+            fill={item.color}
+          />
+        </svg>
+      </div>
+    )
+  }
+
+  if (item.shape === 'arrow') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <g transform={`translate(50,50)${flip}`}>
+          <polygon points="-40,0 10,-30 10,-12 40,-12 40,12 10,12 10,30" fill={item.color} />
+        </g>
+      </svg>
+    )
+  }
+
+  if (item.shape === 'triangle') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <g transform={`translate(50,50)${flip}`}>
+          <polygon points="-35,0 25,-30 25,30" fill={item.color} />
+        </g>
+      </svg>
+    )
+  }
+
+  if (item.shape === 'hand') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <g transform={`translate(50,50)${flip}`}>
+          {/* Simpele wijzende hand */}
+          <rect x="-10" y="-6" width="40" height="12" rx="6" fill={item.color} />
+          <polygon points="-10,0 -30,-15 -30,15" fill={item.color} />
+          {/* Vingers-suggestie */}
+          <circle cx="-28" cy="0" r="4" fill={item.color} />
+        </g>
+      </svg>
+    )
+  }
+
+  if (item.shape === 'car') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <g transform={`translate(50,50)${flip}`}>
+          {/* Auto body */}
+          <rect x="-35" y="-10" width="70" height="20" rx="8" fill={item.color} />
+          <rect x="-20" y="-22" width="35" height="16" rx="5" fill={item.color} />
+          {/* Wielen */}
+          <circle cx="-20" cy="14" r="7" fill="#333" />
+          <circle cx="20" cy="14" r="7" fill="#333" />
+          {/* Richting indicator */}
+          <polygon points="-38,-2 -48,-2 -48,2 -38,2" fill={item.color} opacity="0.5" />
+        </g>
+      </svg>
+    )
+  }
+
+  // Fallback
+  return <svg width={size} height={size}><text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="60">{isLeft ? '←' : '→'}</text></svg>
+}
+
+const COLORS = ['#E8734A', '#2E8BC0', '#5B8C5A', '#9B7CC8', '#D4973B']
+
+function makeLR(direction: 'links' | 'rechts', shape: LRItem['shape'], label: string, color?: string, stroopText?: string): LRItem {
+  return { direction, shape, label, color: color ?? pickRandom(COLORS), stroopText }
+}
 
 const LR_ITEMS_EASY: LRItem[] = [
-  { emoji: '⬅️', direction: 'links', label: 'Pijl', mirror: false },
-  { emoji: '➡️', direction: 'rechts', label: 'Pijl', mirror: false },
-  { emoji: '👈', direction: 'links', label: 'Hand', mirror: false },
-  { emoji: '👉', direction: 'rechts', label: 'Hand', mirror: false },
-  { emoji: '◀️', direction: 'links', label: 'Driehoek', mirror: false },
-  { emoji: '▶️', direction: 'rechts', label: 'Driehoek', mirror: false },
+  makeLR('links', 'arrow', 'Pijl', '#E8734A'),
+  makeLR('rechts', 'arrow', 'Pijl', '#E8734A'),
+  makeLR('links', 'arrow', 'Pijl', '#2E8BC0'),
+  makeLR('rechts', 'arrow', 'Pijl', '#2E8BC0'),
+  makeLR('links', 'triangle', 'Driehoek', '#5B8C5A'),
+  makeLR('rechts', 'triangle', 'Driehoek', '#5B8C5A'),
 ]
 
 const LR_ITEMS_MEDIUM: LRItem[] = [
-  // Gebruik een grote pijl in een gekleurde cirkel — altijd duidelijk
-  { emoji: '🔴←', direction: 'links', label: 'Rode pijl', mirror: false },
-  { emoji: '🔴→', direction: 'rechts', label: 'Rode pijl', mirror: false },
-  { emoji: '🟢←', direction: 'links', label: 'Groene pijl', mirror: false },
-  { emoji: '🟢→', direction: 'rechts', label: 'Groene pijl', mirror: false },
-  { emoji: '🔵←', direction: 'links', label: 'Blauwe pijl', mirror: false },
-  { emoji: '🔵→', direction: 'rechts', label: 'Blauwe pijl', mirror: false },
-  // Handen met kleuren
-  { emoji: '🤛', direction: 'links', label: 'Vuist', mirror: false },
-  { emoji: '🤜', direction: 'rechts', label: 'Vuist', mirror: false },
+  makeLR('links', 'hand', 'Hand', '#E8734A'),
+  makeLR('rechts', 'hand', 'Hand', '#E8734A'),
+  makeLR('links', 'car', 'Auto', '#2E8BC0'),
+  makeLR('rechts', 'car', 'Auto', '#2E8BC0'),
+  makeLR('links', 'hand', 'Hand', '#9B7CC8'),
+  makeLR('rechts', 'hand', 'Hand', '#9B7CC8'),
+  makeLR('links', 'arrow', 'Pijl', '#D4973B'),
+  makeLR('rechts', 'arrow', 'Pijl', '#D4973B'),
 ]
 
 const LR_ITEMS_HARD: LRItem[] = [
-  // Schoenen — links/rechts schoen is universeel
-  { emoji: '👟←', direction: 'links', label: 'Schoen', mirror: false },
-  { emoji: '👟→', direction: 'rechts', label: 'Schoen', mirror: false },
-  // Pijlen met afleiding (letter L/R)
-  { emoji: 'L ←', direction: 'links', label: 'Letter L', mirror: false },
-  { emoji: 'R →', direction: 'rechts', label: 'Letter R', mirror: false },
-  // Verwarrend: letter zegt iets anders dan de pijl
-  { emoji: 'R ←', direction: 'links', label: 'Stroop', mirror: false },
-  { emoji: 'L →', direction: 'rechts', label: 'Stroop', mirror: false },
-  // Dubbele pijlen
-  { emoji: '⟸', direction: 'links', label: 'Dubbele pijl', mirror: false },
-  { emoji: '⟹', direction: 'rechts', label: 'Dubbele pijl', mirror: false },
+  // Stroop: tekst zegt iets anders dan de pijl
+  makeLR('links', 'stroop', 'Stroop', '#E8734A', 'RECHTS'),
+  makeLR('rechts', 'stroop', 'Stroop', '#2E8BC0', 'LINKS'),
+  makeLR('links', 'stroop', 'Stroop', '#5B8C5A', 'RECHTS'),
+  makeLR('rechts', 'stroop', 'Stroop', '#9B7CC8', 'LINKS'),
+  // Gewone items met afleiding
+  makeLR('links', 'car', 'Auto', '#D4973B'),
+  makeLR('rechts', 'car', 'Auto', '#E8734A'),
+  makeLR('links', 'hand', 'Hand', '#2E8BC0'),
+  makeLR('rechts', 'hand', 'Hand', '#5B8C5A'),
 ]
 
 function LinksRechts({ onBack, difficulty }: GameProps) {
@@ -488,11 +564,8 @@ function LinksRechts({ onBack, difficulty }: GameProps) {
               exit={{ opacity: 0, scale: 0.7 }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
               className="flex items-center justify-center mb-8"
-              style={{ lineHeight: 1 }}
             >
-              <span style={{ fontSize: 96, display: 'inline-block', transform: item.mirror ? 'scaleX(-1)' : 'none' }}>
-                {item.emoji}
-              </span>
+              <LRShape item={item} size={120} />
             </motion.div>
           </AnimatePresence>
 
