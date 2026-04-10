@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import { useIndependenceTasks, useCompleteIndependenceTask } from '../../lib/queries'
+import { TtsButton } from '../../components/TtsButton'
 
 const CATEGORY_COLORS: Record<string, string> = {
   zelfredzaamheid: '#7BAFA3',
@@ -74,15 +75,18 @@ function TaskCard({ task, onComplete }: { task: any; onComplete: (id: string) =>
 
         {/* Tekst */}
         <div className="flex-1 min-w-0">
-          <p
-            className="font-body font-semibold text-base"
-            style={{
-              color: done ? color : 'var(--text-primary)',
-              textDecoration: done ? 'line-through' : 'none',
-            }}
-          >
-            {task.title}
-          </p>
+          <div className="flex items-center gap-2">
+            <p
+              className="font-body font-semibold text-base flex-1"
+              style={{
+                color: done ? color : 'var(--text-primary)',
+                textDecoration: done ? 'line-through' : 'none',
+              }}
+            >
+              {task.title}
+            </p>
+            <TtsButton text={task.title} size={28} />
+          </div>
           {task.description && (
             <p className="font-body text-xs text-ink-muted mt-0.5">{task.description}</p>
           )}

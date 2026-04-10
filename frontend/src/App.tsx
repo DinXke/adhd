@@ -44,6 +44,7 @@ const RecipeEditorPage = lazy(() => import('./pages/parent/RecipeEditorPage').th
 const AppointmentsPage = lazy(() => import('./pages/parent/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })))
 const MoneyPage = lazy(() => import('./pages/child/MoneyPage').then(m => ({ default: m.MoneyPage })))
 const RecipePage = lazy(() => import('./pages/child/RecipePage').then(m => ({ default: m.RecipePage })))
+const DocumentsPage = lazy(() => import('./pages/parent/DocumentsPage').then(m => ({ default: m.DocumentsPage })))
 
 // Publiek
 const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
@@ -124,6 +125,7 @@ export default function App() {
           <Route path="children" element={<ChildrenPage />} />
           <Route path="communication" element={<CommunicationPage />} />
           <Route path="dossier" element={<DossierPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
           <Route path="hulpverleners" element={<InvitesPage />} />
           <Route path="voortgang" element={<ProgressPage />} />
           <Route path="vaardigheden" element={<IndependenceEditorPage />} />

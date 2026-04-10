@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '../../stores/authStore'
 import { useTodaySchedule, Activity } from '../../lib/queries'
 import { api } from '../../lib/api'
+import { TtsButton } from '../../components/TtsButton'
 
 interface Appointment {
   id: string
@@ -321,9 +322,12 @@ export default function DayPage() {
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{currentActivity.icon}</span>
                 <div className="flex-1">
-                  <p className="font-display font-bold text-white text-xl leading-tight">
-                    {currentActivity.title}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display font-bold text-white text-xl leading-tight">
+                      {currentActivity.title}
+                    </p>
+                    <TtsButton text={currentActivity.title} size={28} />
+                  </div>
                   {nextItem && (
                     <p className="text-white/70 font-body text-sm mt-0.5">
                       Daarna: {nextItem.icon} {nextItem.title}

@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import {
   useMyChildren, useChannels, useMessages, useSendMessage, useCreateChannel,
-  Channel, Message,
+  Channel, Message, Attachment,
 } from '../../lib/queries'
 import { AvatarDisplay } from '../../components/AvatarDisplay'
+import { apiFetch } from '../../lib/api'
 import { format, isToday, isYesterday } from 'date-fns'
 import { nl } from 'date-fns/locale'
 
@@ -139,7 +140,7 @@ function MessageBubble({ msg, isMine }: { msg: Message; isMine: boolean }) {
               {msg.attachments.map(att => (
                 <a
                   key={att.id}
-                  href={`/api/communication/files/${encodeURIComponent(att.storageKey)}`}
+                  href={`/api/upload/download/${att.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${isMine ? 'bg-white/20 hover:bg-white/30' : 'bg-surface hover:bg-border'} transition-colors`}
@@ -260,6 +261,8 @@ export function CommunicationPage() {
   const [showNewChannel, setShowNewChannel] = useState(false)
   const [message, setMessage] = useState('')
   const [showTemplate, setShowTemplate] = useState(false)
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([])
+  const [uploading, setUploading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -279,10 +282,50 @@ export function CommunicationPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const resp = await apiFetch<{ attachment: Attachment }>('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      setPendingAttachments(prev => [...prev, resp.attachment])
+    } catch (err: any) {
+      alert(err.message || 'Upload mislukt')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  function removePendingAttachment(id: string) {
+    setPendingAttachments(prev => prev.filter(a => a.id !== id))
+  }
+
   async function handleSend() {
-    if (!message.trim() || !selectedChannelId) return
-    await sendMessage.mutateAsync({ channelId: selectedChannelId, content: message.trim() })
+    if ((!message.trim() && pendingAttachments.length === 0) || !selectedChannelId) return
+    const content = message.trim() || (pendingAttachments.length > 0 ? `📎 ${pendingAttachments.map(a => a.filename).join(', ')}` : '')
+    const result = await sendMessage.mutateAsync({ channelId: selectedChannelId, content })
+    // Link pending attachments to the sent message
+    const msgId = (result as any)?.message?.id
+    if (msgId && pendingAttachments.length > 0) {
+      await Promise.all(
+        pendingAttachments.map(att =>
+          apiFetch('/api/upload/link-message', {
+            method: 'POST',
+            body: JSON.stringify({ attachmentId: att.id, messageId: msgId }),
+          })
+        )
+      )
+      // Refresh messages to show attachments
+      refetchMessages()
+    }
     setMessage('')
+    setPendingAttachments([])
   }
 
   async function handleTemplateSend(content: string, templateData: any) {
@@ -424,34 +467,76 @@ export function CommunicationPage() {
             </AnimatePresence>
 
             {/* Berichtinvoer */}
-            <div className="border-t border-border bg-card px-3 py-3 flex items-end gap-2 flex-shrink-0">
-              <button
-                onClick={() => setShowTemplate(!showTemplate)}
-                title="Gestructureerde update"
-                className="p-2 rounded-xl border border-border text-ink-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-              </button>
-              <textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-                placeholder="Schrijf een bericht... (Enter = versturen)"
-                rows={1}
-                className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-surface text-sm text-ink focus:border-accent focus:outline-none resize-none min-h-[40px] max-h-32"
-                style={{ height: 'auto' }}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!message.trim() || sendMessage.isPending}
-                className="p-2.5 rounded-xl bg-accent text-white disabled:opacity-40 transition-opacity flex-shrink-0"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                </svg>
-              </button>
+            <div className="border-t border-border bg-card px-3 py-3 flex-shrink-0">
+              {/* Pending attachments */}
+              {pendingAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {pendingAttachments.map(att => (
+                    <span key={att.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs text-ink">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      {att.filename}
+                      <button onClick={() => removePendingAttachment(att.id)} className="text-ink-muted hover:text-ink ml-0.5">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={() => setShowTemplate(!showTemplate)}
+                  title="Gestructureerde update"
+                  className="p-2 rounded-xl border border-border text-ink-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  title="Bestand bijvoegen"
+                  className="p-2 rounded-xl border border-border text-ink-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0 disabled:opacity-40"
+                >
+                  {uploading ? (
+                    <div className="w-[18px] h-[18px] border-2 border-ink-muted border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                  )}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                />
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+                  placeholder="Schrijf een bericht... (Enter = versturen)"
+                  rows={1}
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-surface text-sm text-ink focus:border-accent focus:outline-none resize-none min-h-[40px] max-h-32"
+                  style={{ height: 'auto' }}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={(!message.trim() && pendingAttachments.length === 0) || sendMessage.isPending}
+                  className="p-2.5 rounded-xl bg-accent text-white disabled:opacity-40 transition-opacity flex-shrink-0"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </>
         ) : (

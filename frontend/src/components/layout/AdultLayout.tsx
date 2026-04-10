@@ -162,6 +162,17 @@ function IconHelp({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth
   )
 }
 
+// Documenten-icoon — map met bestanden
+function IconDocuments({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M4 8C4 6.9 4.9 6 6 6H13L16 10H26C27.1 10 28 10.9 28 12V24C28 25.1 27.1 26 26 26H6C4.9 26 4 25.1 4 24V8Z" stroke="currentColor" />
+      <path d="M12 18H20" stroke="currentColor" />
+      <path d="M12 22H17" stroke="currentColor" />
+    </svg>
+  )
+}
+
 // Afspraken-icoon — kalender met ster
 function IconAppointments({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
   return (
@@ -184,6 +195,7 @@ const PARENT_LINKS = [
   { to: '/dashboard/voortgang', label: 'Voortgang', Icon: IconProgress, roles: ['caregiver'] },
   { to: '/dashboard/communication', label: 'Communicatie', Icon: IconCommunication, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/dossier', label: 'Dossier', Icon: IconDossier, roles: ['parent', 'admin', 'caregiver'] },
+  { to: '/dashboard/documents', label: 'Documenten', Icon: IconDocuments, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/hulpverleners', label: 'Hulpverleners', Icon: IconCaregivers, roles: ['parent', 'admin'] },
   { to: '/dashboard/vaardigheden', label: 'Vaardigheden', Icon: IconSkills, roles: ['parent', 'admin'] },
   { to: '/dashboard/social-scripts', label: 'Sociale scripts', Icon: IconSocial, roles: ['parent', 'admin'] },

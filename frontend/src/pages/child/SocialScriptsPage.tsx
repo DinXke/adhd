@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import { useSocialScripts, usePlaySocialScript } from '../../lib/queries'
+import { TtsButton } from '../../components/TtsButton'
 
 function ScenarioPlayer({ script, onClose }: { script: any; onClose: () => void }) {
   const [chosen, setChosen] = useState<number | null>(null)
@@ -48,10 +49,11 @@ function ScenarioPlayer({ script, onClose }: { script: any; onClose: () => void 
 
         {/* Scenario */}
         <h2 className="font-display font-bold text-ink text-xl mb-3">{script.title}</h2>
-        <div className="rounded-2xl p-4 mb-5" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
-          <p className="font-body text-ink leading-relaxed" style={{ fontSize: 17 }}>
+        <div className="rounded-2xl p-4 mb-5 relative" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
+          <p className="font-body text-ink leading-relaxed pr-10" style={{ fontSize: 17 }}>
             {script.scenario}
           </p>
+          <TtsButton text={script.scenario} className="absolute top-3 right-3" />
         </div>
 
         {/* Keuzes */}

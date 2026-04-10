@@ -578,8 +578,8 @@ export function ListsPage() {
           <motion.button
             onClick={() => setShowNewForm(true)}
             whileTap={{ scale: 0.9 }}
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl font-bold"
-            style={{ background: 'var(--accent-warm)' }}
+            className="w-14 h-14 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+            style={{ background: 'var(--accent-warm)', minWidth: 56, minHeight: 56 }}
             aria-label="Nieuw lijstje"
           >
             +
@@ -623,6 +623,19 @@ export function ListsPage() {
             />
           ))}
         </motion.div>
+      )}
+
+      {/* Floating action button voor mobiel (boven de bottom nav) */}
+      {!showNewForm && (
+        <motion.button
+          onClick={() => { setShowNewForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+          whileTap={{ scale: 0.9 }}
+          className="fixed right-5 z-30 w-14 h-14 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-xl"
+          style={{ background: 'var(--accent-warm)', bottom: 90 }}
+          aria-label="Nieuw lijstje"
+        >
+          +
+        </motion.button>
       )}
     </div>
   )

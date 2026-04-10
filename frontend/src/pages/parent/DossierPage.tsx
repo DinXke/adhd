@@ -1,7 +1,7 @@
 /**
  * Dossier — centraal kind-dossier met timeline, verslagen, IHP, medicatie, notities.
  */
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import {
@@ -11,7 +11,9 @@ import {
   useUpdateDossierEntry,
   useDeleteDossierEntry,
   DossierEntry,
+  Attachment,
 } from '../../lib/queries'
+import { apiFetch } from '../../lib/api'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 
@@ -36,7 +38,7 @@ function EntryForm({
   onCancel,
 }: {
   initial?: Partial<DossierEntry>
-  onSave: (data: { category: string; title: string; content: string }) => Promise<void>
+  onSave: (data: { category: string; title: string; content: string; attachmentIds?: string[] }) => Promise<void>
   onCancel: () => void
 }) {
   const [category, setCategory] = useState<string>(initial?.category ?? 'note')
@@ -44,13 +46,41 @@ function EntryForm({
   const [content, setContent] = useState(initial?.content ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<Attachment[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const resp = await apiFetch<{ attachment: Attachment }>('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      setPendingFiles(prev => [...prev, resp.attachment])
+    } catch (err: any) {
+      setError(err.message || 'Upload mislukt')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !content.trim()) return setError('Vul titel en inhoud in')
     setSaving(true)
     try {
-      await onSave({ category, title: title.trim(), content: content.trim() })
+      await onSave({
+        category,
+        title: title.trim(),
+        content: content.trim(),
+        attachmentIds: pendingFiles.map(f => f.id),
+      })
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -99,6 +129,51 @@ function EntryForm({
           placeholder="Schrijf hier de inhoud van het verslag, plan of notitie..."
           rows={6}
           className="w-full px-4 py-2.5 rounded-xl border border-border bg-card text-ink focus:border-accent focus:outline-none resize-y"
+        />
+      </div>
+
+      {/* Bestanden */}
+      <div>
+        <label className="block text-sm font-medium text-ink-muted mb-1.5">Bijlagen</label>
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {pendingFiles.map(f => (
+              <span key={f.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-xs text-ink">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                {f.filename}
+                <button type="button" onClick={() => setPendingFiles(prev => prev.filter(x => x.id !== f.id))} className="text-ink-muted hover:text-ink ml-0.5">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-border text-sm text-ink-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-40"
+        >
+          {uploading ? (
+            <div className="w-4 h-4 border-2 border-ink-muted border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          )}
+          Bestand toevoegen
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
         />
       </div>
 
@@ -187,7 +262,7 @@ function EntryCard({
                   <div className="mt-3 space-y-1">
                     {entry.attachments.map(att => (
                       <a key={att.id}
-                        href={`/api/communication/files/${encodeURIComponent(att.storageKey)}`}
+                        href={`/api/upload/download/${att.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 text-xs text-accent hover:underline"
@@ -248,14 +323,39 @@ export function DossierPage() {
 
   const entries = data?.entries ?? []
 
-  async function handleCreate(formData: { category: string; title: string; content: string }) {
-    await createEntry.mutateAsync({ childId: childId!, ...formData })
+  async function handleCreate(formData: { category: string; title: string; content: string; attachmentIds?: string[] }) {
+    const { attachmentIds, ...rest } = formData
+    const result = await createEntry.mutateAsync({ childId: childId!, ...rest })
+    // Link uploaded attachments to the new dossier entry
+    const entryId = (result as any)?.entry?.id
+    if (entryId && attachmentIds && attachmentIds.length > 0) {
+      await Promise.all(
+        attachmentIds.map(attId =>
+          apiFetch('/api/upload/link-dossier', {
+            method: 'POST',
+            body: JSON.stringify({ attachmentId: attId, dossierId: entryId }),
+          })
+        )
+      )
+    }
     setShowForm(false)
   }
 
-  async function handleUpdate(formData: { category: string; title: string; content: string }) {
+  async function handleUpdate(formData: { category: string; title: string; content: string; attachmentIds?: string[] }) {
     if (!editingEntry) return
-    await updateEntry.mutateAsync({ childId: childId!, id: editingEntry.id, ...formData })
+    const { attachmentIds, ...rest } = formData
+    await updateEntry.mutateAsync({ childId: childId!, id: editingEntry.id, ...rest })
+    // Link any new uploaded attachments
+    if (attachmentIds && attachmentIds.length > 0) {
+      await Promise.all(
+        attachmentIds.map(attId =>
+          apiFetch('/api/upload/link-dossier', {
+            method: 'POST',
+            body: JSON.stringify({ attachmentId: attId, dossierId: editingEntry.id }),
+          })
+        )
+      )
+    }
     setEditingEntry(null)
   }
 

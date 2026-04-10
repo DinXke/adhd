@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import { api } from '../../lib/api'
 import { useSpeechInput } from '../../hooks/useSpeechInput'
+import { TtsButton } from '../../components/TtsButton'
 
 // ── Types ──────────────────────────────────────────────────────
 interface ExerciseQuestion {
@@ -54,60 +55,7 @@ const SUBJECTS = [
   { key: 'wereldorientatie', label: 'Wereld', emoji: '🌍', color: '#9B7CC8' },
 ]
 
-// TTS knop component
-function TtsButton({ text }: { text: string }) {
-  const [speaking, setSpeaking] = useState(false)
-
-  const speak = () => {
-    if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    if (speaking) { setSpeaking(false); return }
-    const utterance = new SpeechSynthesisUtterance(text)
-    // Prefer Flemish, fallback to Dutch
-    const voices = window.speechSynthesis.getVoices()
-    const flemish = voices.find(v => v.lang === 'nl-BE')
-    const dutch = voices.find(v => v.lang.startsWith('nl'))
-    if (flemish) utterance.voice = flemish
-    else if (dutch) utterance.voice = dutch
-    utterance.lang = 'nl-BE'
-    utterance.rate = 0.9
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = () => setSpeaking(false)
-    setSpeaking(true)
-    window.speechSynthesis.speak(utterance)
-  }
-
-  if (!window.speechSynthesis) return null
-
-  return (
-    <motion.button
-      type="button"
-      whileTap={{ scale: 0.9 }}
-      onClick={speak}
-      title={speaking ? 'Stop voorlezen' : 'Voorlezen'}
-      className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center"
-      style={{
-        background: speaking ? 'var(--accent-warm)' : 'var(--bg-surface)',
-        border: '1.5px solid var(--accent-calm)',
-      }}
-    >
-      {speaking ? (
-        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-          </svg>
-        </motion.div>
-      ) : (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round">
-          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-        </svg>
-      )}
-    </motion.button>
-  )
-}
+// TtsButton is now imported from ../../components/TtsButton
 
 const DIFFICULTY_LABELS = ['', 'Makkelijk', 'Gemiddeld', 'Moeilijk', 'Extra moeilijk', 'Uitdaging']
 
@@ -182,7 +130,7 @@ function ExerciseRenderer({
         >
           {q.question}
         </p>
-        <TtsButton text={q.question} />
+        <TtsButton text={q.question} className="absolute top-2 right-2" />
       </motion.div>
 
       {/* Hint of uitleg */}
