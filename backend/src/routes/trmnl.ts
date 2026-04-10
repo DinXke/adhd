@@ -139,22 +139,22 @@ polling_headers:
 polling_body: '{"user_uuid":"{{user_uuid}}","api_key":"{{api_key}}"}'
 refresh_rate: 900
 custom_fields:
-  - name: grip_url
-    label: "GRIP Server URL"
-    type: text
+  - keyname: grip_url
+    field_type: text
+    name: "GRIP Server URL"
     placeholder: "${appUrl}"
     hint: "Het adres van je GRIP-installatie (zonder trailing slash)"
     required: true
-  - name: user_uuid
-    label: "TRMNL User UUID"
-    type: text
+  - keyname: user_uuid
+    field_type: text
+    name: "TRMNL User UUID"
     placeholder: "Je TRMNL user UUID (zie account-instellingen)"
     hint: "Wordt automatisch meegegeven, laat leeg indien onzeker"
     required: false
-  - name: api_key
-    label: "API Key"
-    type: text
-    placeholder: "Genereer via GRIP admin → TRMNL → Token genereren"
+  - keyname: api_key
+    field_type: text
+    name: "API Key"
+    placeholder: "Genereer via GRIP admin -> TRMNL -> Token genereren"
     hint: "Beveiligingstoken voor toegang tot de markup-API"
     required: true`,
 
