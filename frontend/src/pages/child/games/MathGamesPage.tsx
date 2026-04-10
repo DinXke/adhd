@@ -13,6 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../../stores/authStore'
 import { api } from '../../../lib/api'
+import { soundCorrect, soundWrong, soundMatch, soundWin, soundPop, soundFlip, soundTap, soundStreak, feedbackCorrect, feedbackWrong, feedbackWin, soundTick, soundPickup, soundDrop, vibrate } from '../../../lib/sounds'
 
 // ═══════════════════════════════════════════════════════════════
 // Gedeelde helpers
@@ -306,6 +307,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
       setFlippedIds(newFlipped)
 
       // Flip the card
+      soundFlip()
       setCards((prev) => prev.map((c) => (c.id === id ? { ...c, isFlipped: true } : c)))
 
       if (newFlipped.length === 2) {
@@ -317,6 +319,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
 
         if (c1.matchGroup === c2.matchGroup) {
           // Match!
+          soundMatch()
           setTimeout(() => {
             setCards((prev) =>
               prev.map((c) =>
@@ -326,6 +329,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
             setMatches((m) => {
               const next = m + 1
               if (next === totalPairs) {
+                feedbackWin()
                 setShowConfetti(true)
                 setTimeout(() => setGameOver(true), 1500)
               }
@@ -584,6 +588,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
     const iv = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
+          soundWin()
           setGameOver(true)
           return 0
         }
@@ -650,6 +655,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
 
       if (first.value + bubble.value === target) {
         // Correct pair!
+        soundPop()
         setScore((s) => s + 1)
         setShowConfetti(true)
         setTimeout(() => setShowConfetti(false), 800)
@@ -662,6 +668,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
         if (navigator.vibrate) navigator.vibrate(50)
       } else {
         // Wrong pair — shake
+        feedbackWrong()
         setBubbles((prev) =>
           prev.map((b) =>
             b.id === first.id || b.id === id ? { ...b, shaking: true } : b,
@@ -894,8 +901,10 @@ function DragEquation({ onBack, difficulty }: GameProps) {
 
   const handleOptionTap = (value: number) => {
     if (feedback) return
+    soundDrop()
 
     if (value === round.answer) {
+      feedbackCorrect()
       setFeedback('correct')
       setScore((s) => s + 1)
       setShowConfetti(true)
@@ -910,6 +919,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
         }
       }, 900)
     } else {
+      soundWrong()
       setFeedback('wrong')
       setTimeout(() => setFeedback(null), 800)
     }
@@ -1293,6 +1303,7 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
     setSelectedOption(value)
 
     if (value === round.answer) {
+      feedbackCorrect()
       setFeedback('correct')
       setScore((s) => s + 1)
       setShowConfetti(true)
@@ -1308,6 +1319,7 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
         }
       }, 1000)
     } else {
+      soundWrong()
       setFeedback('wrong')
       setTimeout(() => {
         setFeedback(null)
@@ -1587,6 +1599,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
 
   const toggleSlice = (index: number) => {
     if (feedback) return
+    soundTap()
     setColoredSlices((prev) => {
       const next = new Set(prev)
       if (next.has(index)) {
@@ -1601,6 +1614,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
   const checkAnswer = () => {
     if (feedback) return
     if (coloredSlices.size === round.numerator) {
+      feedbackCorrect()
       setFeedback('correct')
       setScore((s) => s + 1)
       setShowConfetti(true)
@@ -1610,12 +1624,14 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
         setFeedback(null)
         setColoredSlices(new Set())
         if (currentRound + 1 >= allRounds.length) {
+          soundWin()
           setGameOver(true)
         } else {
           setCurrentRound((r) => r + 1)
         }
       }, 1200)
     } else {
+      soundWrong()
       setFeedback('wrong')
       setTimeout(() => setFeedback(null), 900)
     }
@@ -1872,6 +1888,7 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
     const iv = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
+          feedbackWin()
           setGameOver(true)
           return 0
         }
@@ -1887,12 +1904,14 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
     setTotalAnswered((t) => t + 1)
 
     if (value === problem.answer) {
+      feedbackCorrect()
       setFeedback('correct')
       setScore((s) => s + 1)
       const newStreak = streak + 1
       setStreak(newStreak)
       if (newStreak > maxStreak) setMaxStreak(newStreak)
       if (newStreak > 0 && newStreak % 3 === 0) {
+        soundStreak()
         setShowStreak(true)
         setTimeout(() => setShowStreak(false), 800)
       }
@@ -1903,6 +1922,7 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
         setProblem(generateSpeedProblem(newStreak, difficulty))
       }, 400)
     } else {
+      soundWrong()
       setFeedback('wrong')
       setStreak(0)
       setTimeout(() => {

@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../../stores/authStore'
 import { api } from '../../../lib/api'
+import { soundTap, soundMatch, soundFlip, soundPickup, soundDrop, soundWin, feedbackCorrect, feedbackWrong, feedbackWin } from '../../../lib/sounds'
 
 // ── Hulpfuncties ─────────────────────────────────────────────
 function shuffle<T>(arr: T[]): T[] {
@@ -446,6 +447,7 @@ function WordScramble({
   const handleLetterTap = useCallback(
     (item: { letter: string; id: number }) => {
       if (correct) return
+      soundTap()
       // Vind eerste lege plek
       const idx = placed.indexOf(null)
       if (idx === -1) return
@@ -457,6 +459,7 @@ function WordScramble({
       if (newPlaced.every((l) => l !== null)) {
         const attempt = newPlaced.join('')
         if (attempt === currentWord) {
+          feedbackCorrect()
           setCorrect(true)
           setShowSuccess(true)
           setScore((s) => s + 1)
@@ -499,6 +502,7 @@ function WordScramble({
   )
 
   const finishGame = async (finalScore: number) => {
+    soundWin()
     const tokens = Math.max(1, Math.round((finalScore / TOTAL_ROUNDS) * 3))
     setTokensEarned(tokens)
     if (user?.id) await awardTokens(user.id, tokens, `Woordpuzzel: ${finalScore}/${TOTAL_ROUNDS}`)
@@ -728,6 +732,7 @@ function WordSearch({
 
   const handlePointerDown = useCallback(
     (row: number, col: number) => {
+      soundTap()
       setSelecting([{ row, col }])
     },
     [],
@@ -767,16 +772,20 @@ function WordSearch({
     const word = selecting.map((c) => grid[c.row][c.col].letter).join('')
     const wordReversed = [...selecting].reverse().map((c) => grid[c.row][c.col].letter).join('')
     if (placedWords.includes(word) && !found.includes(word)) {
+      soundMatch()
       setFound((f) => [...f, word])
       if (navigator.vibrate) navigator.vibrate(30)
       // Check of alles gevonden
       if (found.length + 1 === placedWords.length) {
+        feedbackWin()
         finishGame(found.length + 1)
       }
     } else if (placedWords.includes(wordReversed) && !found.includes(wordReversed)) {
+      soundMatch()
       setFound((f) => [...f, wordReversed])
       if (navigator.vibrate) navigator.vibrate(30)
       if (found.length + 1 === placedWords.length) {
+        feedbackWin()
         finishGame(found.length + 1)
       }
     }
@@ -933,6 +942,7 @@ function LetterMemory({
       if (lockRef.current) return
       if (flipped.includes(cardId) || matched.includes(cardId)) return
 
+      soundFlip()
       const newFlipped = [...flipped, cardId]
       setFlipped(newFlipped)
 
@@ -945,6 +955,7 @@ function LetterMemory({
 
         if (card1.pairId === card2.pairId) {
           // Match!
+          soundMatch()
           if (navigator.vibrate) navigator.vibrate(30)
           setTimeout(() => {
             const newMatched = [...matched, first, second]
@@ -952,6 +963,7 @@ function LetterMemory({
             setFlipped([])
             lockRef.current = false
             if (newMatched.length === cards.length) {
+              feedbackWin()
               finishGame(newMatched.length / 2)
             }
           }, 500)
@@ -1104,14 +1116,17 @@ function SentenceBuilder({
   const handleWordTap = useCallback(
     (item: { word: string; id: number }) => {
       if (correct) return
+      soundPickup()
       const newPlaced = [...placed, item.word]
       setPlaced(newPlaced)
+      soundDrop()
       setAvailable((prev) => prev.filter((a) => a.id !== item.id))
 
       // Check positie-voor-positie highlighting wordt visueel gedaan
       if (newPlaced.length === targetWords.length) {
         const isCorrect = newPlaced.join(' ') === currentSentence
         if (isCorrect) {
+          feedbackCorrect()
           setCorrect(true)
           setShowSuccess(true)
           setScore((s) => s + 1)
@@ -1299,6 +1314,7 @@ function SpellingBee({
   const handleKeyTap = useCallback(
     (letter: string) => {
       if (correct) return
+      soundTap()
       const nextIdx = input.length
       if (nextIdx >= target.length) return
       if (letter.toLowerCase() === target[nextIdx]) {
@@ -1307,6 +1323,7 @@ function SpellingBee({
         if (navigator.vibrate) navigator.vibrate(15)
         // Woord compleet?
         if (newInput.length === target.length) {
+          feedbackCorrect()
           setCorrect(true)
           setShowSuccess(true)
           setScore((s) => s + 1)
@@ -1323,6 +1340,7 @@ function SpellingBee({
         }
       } else {
         // Fout — shake
+        feedbackWrong()
         setShake(true)
         if (navigator.vibrate) navigator.vibrate([50, 30, 50])
         setTimeout(() => setShake(false), 500)
@@ -1540,8 +1558,10 @@ function CategorySort({
   const handleDrop = useCallback(
     (categoryName: string) => {
       if (!currentWord || feedback) return
+      soundPickup()
 
       if (currentWord.category === categoryName) {
+        feedbackCorrect()
         setScore((s) => s + 1)
         setSorted((prev) => ({
           ...prev,
@@ -1560,6 +1580,7 @@ function CategorySort({
           }
         }, 700)
       } else {
+        feedbackWrong()
         setFeedback('wrong')
         if (navigator.vibrate) navigator.vibrate([50, 30, 50])
         setTimeout(() => setFeedback(null), 800)

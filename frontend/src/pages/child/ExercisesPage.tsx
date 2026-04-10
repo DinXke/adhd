@@ -13,6 +13,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { api } from '../../lib/api'
 import { useSpeechInput } from '../../hooks/useSpeechInput'
 import { TtsButton } from '../../components/TtsButton'
+import { feedbackCorrect, feedbackWrong, soundToken, soundWin } from '../../lib/sounds'
 
 // ── Spelletjes-link component ─────────────────────────────────
 function GamesLink({ to, emoji, title, sub, color }: {
@@ -382,9 +383,11 @@ function ExerciseSession({
         timeSeconds: Math.floor((Date.now() - startTimeRef.current) / 1000),
       })
 
+      if (res.tokensAwarded > 0) soundToken()
       setSessionTokens((t) => t + (res.tokensAwarded ?? 0))
 
       if (res.isCorrect) {
+        feedbackCorrect()
         setCorrectThisRound(true)
         setHint(null)
         setShowAnswer(false)
@@ -406,6 +409,7 @@ function ExerciseSession({
           }
         }, 900)
       } else {
+        feedbackWrong()
         if (res.hint) {
           setHint(res.hint)
         }
@@ -590,6 +594,11 @@ function SessionResult({
 }) {
   const pct = Math.round((correct / total) * 100)
   const stars = pct >= 80 ? 3 : pct >= 60 ? 2 : 1
+
+  // Play win sound on mount for good scores
+  useEffect(() => {
+    if (pct >= 80) soundWin()
+  }, [])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[75vh] px-6 text-center pb-24">
