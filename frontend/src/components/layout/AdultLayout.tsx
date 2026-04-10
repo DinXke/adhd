@@ -200,25 +200,20 @@ function IconAppointments({ size = 28, strokeWidth = 2.5 }: { size?: number; str
 }
 
 const PARENT_LINKS = [
+  // Hoofdnavigatie — dagelijks gebruik
   { to: '/dashboard', label: 'Overzicht', Icon: IconHome, roles: ['parent', 'admin'] },
-  { to: '/dashboard/children', label: 'Kinderen', Icon: IconChildren, roles: ['parent', 'admin'] },
-  { to: '/dashboard/tasks', label: 'Taken', Icon: IconTasks, roles: ['parent', 'admin'] },
   { to: '/dashboard/schedule', label: "Schema's", Icon: IconCalendar, roles: ['parent', 'admin'] },
-  { to: '/dashboard/appointments', label: 'Afspraken', Icon: IconAppointments, roles: ['parent', 'admin'] },
+  { to: '/dashboard/tasks', label: 'Taken', Icon: IconTasks, roles: ['parent', 'admin'] },
   { to: '/dashboard/tokens', label: 'Beloningen', Icon: IconTokens, roles: ['parent', 'admin'] },
-  { to: '/dashboard/voortgang', label: 'Voortgang', Icon: IconProgress, roles: ['caregiver'] },
-  { to: '/dashboard/communication', label: 'Communicatie', Icon: IconCommunication, roles: ['parent', 'admin', 'caregiver'] },
+  { to: '/dashboard/exercises/review', label: 'Oefeningen', Icon: IconReview, roles: ['parent', 'admin'] },
+  // Communicatie
+  { to: '/dashboard/communication', label: 'Berichten', Icon: IconCommunication, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/dossier', label: 'Dossier', Icon: IconDossier, roles: ['parent', 'admin', 'caregiver'] },
-  { to: '/dashboard/documents', label: 'Documenten', Icon: IconDocuments, roles: ['parent', 'admin', 'caregiver'] },
-  { to: '/dashboard/hulpverleners', label: 'Hulpverleners', Icon: IconCaregivers, roles: ['parent', 'admin'] },
-  { to: '/dashboard/vaardigheden', label: 'Vaardigheden', Icon: IconSkills, roles: ['parent', 'admin'] },
-  { to: '/dashboard/social-scripts', label: 'Sociale scripts', Icon: IconSocial, roles: ['parent', 'admin'] },
-  { to: '/dashboard/exercises/review', label: 'Oef. review', Icon: IconReview, roles: ['parent', 'admin'] },
-  { to: '/dashboard/money', label: 'Spaarpotje', Icon: IconMoney, roles: ['parent', 'admin'] },
-  { to: '/dashboard/documents', label: 'Documenten', Icon: IconDocuments, roles: ['parent', 'admin', 'caregiver'] },
+  // Hulpverlener
+  { to: '/dashboard/voortgang', label: 'Voortgang', Icon: IconProgress, roles: ['caregiver'] },
+  // Admin
   { to: '/dashboard/system', label: 'Systeem', Icon: IconSystem, roles: ['admin'] },
-  { to: '/dashboard/trmnl-editor', label: 'TRMNL Editor', Icon: IconTrmnlEditor, roles: ['admin'] },
-  { to: '/dashboard/users', label: 'Gebruikers', Icon: IconUsers, roles: ['admin'] },
+  // Altijd onderaan
   { to: '/dashboard/help', label: 'Help', Icon: IconHelp, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/settings', label: 'Instellingen', Icon: IconSettings, roles: ['parent', 'admin'] },
 ]
