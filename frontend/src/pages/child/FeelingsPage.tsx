@@ -171,6 +171,16 @@ const GROUNDING_STEPS = [
   { count: 1, sense: 'ding dat je PROEFT', emoji: '👅', color: '#A8C5D6' },
 ]
 
+/** Returns a readable text color (dark or white) for a given hex background */
+function textColorForBg(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  // Relative luminance approximation
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.55 ? '#3D3229' : '#fff'
+}
+
 function GroundingExercise({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0)
   const [confirmed, setConfirmed] = useState(false)
@@ -241,7 +251,7 @@ function GroundingExercise({ onDone }: { onDone: () => void }) {
             className="w-full font-display font-bold py-4 rounded-2xl text-lg mb-3"
             style={{
               background: confirmed ? 'var(--accent-success)' : current.color,
-              color: 'white',
+              color: confirmed ? '#fff' : textColorForBg(current.color),
               opacity: confirmed ? 0.8 : 1,
             }}
           >

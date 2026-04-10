@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../../stores/authStore'
 import { api } from '../../../lib/api'
-import { soundTap, soundMatch, soundFlip, soundPickup, soundDrop, soundWin, feedbackCorrect, feedbackWrong, feedbackWin } from '../../../lib/sounds'
+import { soundTap, soundMatch, soundFlip, soundPickup, soundDrop, soundWin, feedbackCorrect, feedbackWrong, feedbackWin, isMuted, toggleMute } from '../../../lib/sounds'
 
 // ── Hulpfuncties ─────────────────────────────────────────────
 function shuffle<T>(arr: T[]): T[] {
@@ -257,6 +257,20 @@ const CATEGORY_SETS: { categories: { name: string; words: string[] }[] }[] = [
 
 // ── Gedeelde UI-componenten ──────────────────────────────────
 
+function MuteButton() {
+  const [m, setM] = useState(isMuted())
+  return (
+    <button
+      onClick={() => { const newM = toggleMute(); setM(newM) }}
+      className="w-9 h-9 rounded-full flex items-center justify-center"
+      style={{ background: 'var(--bg-surface)' }}
+      title={m ? 'Geluid aan' : 'Geluid uit'}
+    >
+      {m ? '\uD83D\uDD07' : '\uD83D\uDD0A'}
+    </button>
+  )
+}
+
 function GameHeader({
   title,
   round,
@@ -271,21 +285,20 @@ function GameHeader({
   onBack: () => void
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex items-center justify-between px-4 py-2 flex-shrink-0" style={{ background: 'var(--bg-primary)' }}>
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={onBack}
-        className="w-12 h-12 rounded-full flex items-center justify-center"
-        style={{ background: 'var(--bg-card)', border: '2px solid var(--border-color)' }}
+        className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+        style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M15 18l-6-6 6-6" />
-        </svg>
+        {'\u2190'} Terug
       </motion.button>
+      <MuteButton />
       <div className="text-center flex-1">
-        <h2 className="font-display font-bold text-ink" style={{ fontSize: 18 }}>{title}</h2>
+        <h2 className="font-display font-bold text-ink" style={{ fontSize: 16 }}>{title}</h2>
         {round !== undefined && totalRounds !== undefined && (
-          <p className="font-body text-ink-muted text-sm">{round} / {totalRounds}</p>
+          <p className="font-body text-ink-muted text-xs">{round} / {totalRounds}</p>
         )}
       </div>
       {score !== undefined ? (
@@ -321,7 +334,8 @@ function GameResult({
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center min-h-[80dvh] px-6 text-center"
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center px-6 text-center"
+      style={{ background: 'var(--bg-primary)' }}
     >
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
@@ -407,7 +421,8 @@ function WordScramble({
 }) {
   const { user } = useAuthStore()
   const TOTAL_ROUNDS = 8
-  const words = useMemo(() => pick(getWordList(difficulty), TOTAL_ROUNDS), [difficulty])
+  const [gameKey, setGameKey] = useState(0)
+  const words = useMemo(() => pick(getWordList(difficulty), TOTAL_ROUNDS), [difficulty, gameKey])
 
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
@@ -519,6 +534,7 @@ function WordScramble({
           setScore(0)
           setDone(false)
           setTokensEarned(0)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -527,11 +543,11 @@ function WordScramble({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Woordpuzzel" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6">
+      <div className="flex-1 overflow-auto flex flex-col items-center justify-center px-5 pb-8 gap-6">
         {/* Hint */}
         <AnimatePresence>
           {showHint && !correct && (
@@ -578,19 +594,29 @@ function WordScramble({
           ))}
         </div>
 
-        {/* Beschikbare letters */}
+        {/* Beschikbare letters — draggable + tappable */}
         <div className="flex gap-2 flex-wrap justify-center mt-4">
           <AnimatePresence>
             {available.map((item) => (
-              <motion.button
+              <motion.div
                 key={item.id}
                 layout
                 initial={{ opacity: 0, scale: 0.5 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
+                drag
+                dragSnapToOrigin
+                dragElastic={0.5}
+                onDragEnd={(_e, info) => {
+                  // If dragged far enough upward (toward target slots), place the letter
+                  if (Math.abs(info.offset.y) > 40 || Math.abs(info.offset.x) > 40) {
+                    handleLetterTap(item)
+                  }
+                }}
+                onTap={() => handleLetterTap(item)}
                 whileTap={{ scale: 0.85 }}
-                onClick={() => handleLetterTap(item)}
-                className="font-display font-bold flex items-center justify-center"
+                whileDrag={{ scale: 1.15, zIndex: 50 }}
+                className="font-display font-bold flex items-center justify-center cursor-grab active:cursor-grabbing touch-none"
                 style={{
                   width: 'clamp(48px, 13vw, 64px)',
                   height: 'clamp(48px, 13vw, 64px)',
@@ -602,7 +628,7 @@ function WordScramble({
                 }}
               >
                 {item.letter}
-              </motion.button>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>
@@ -692,18 +718,21 @@ function WordSearch({
   difficulty: number
 }) {
   const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
   const size = difficulty === 1 ? 8 : 10
   const wordCount = difficulty === 1 ? 4 : difficulty === 2 ? 5 : 6
   const themeKey = useMemo(() => {
     const keys = Object.keys(WORDSEARCH_THEMES)
     return keys[Math.floor(Math.random() * keys.length)]
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameKey])
   const theme = WORDSEARCH_THEMES[themeKey]
   const selectedWords = useMemo(() => {
     // Filter woorden die in het raster passen
     const fitting = theme.words.filter((w) => w.length <= size)
     return pick(fitting, wordCount)
-  }, [themeKey, size, wordCount])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeKey, size, wordCount, gameKey])
 
   const { grid, placedWords } = useMemo(
     () => generateWordSearchGrid(selectedWords, size),
@@ -815,6 +844,7 @@ function WordSearch({
           setFound([])
           setDone(false)
           setTokensEarned(0)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -823,9 +853,10 @@ function WordSearch({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title={`Woordzoeker — ${theme.label}`} score={found.length} onBack={onBack} />
 
+      <div className="flex-1 overflow-auto">
       {/* Woordenlijst */}
       <div className="flex flex-wrap gap-2 px-4 py-3 justify-center">
         {placedWords.map((w) => (
@@ -845,7 +876,7 @@ function WordSearch({
       </div>
 
       {/* Grid */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-6">
+      <div className="flex items-center justify-center px-4 pb-6">
         <div
           ref={gridRef}
           className="touch-none select-none"
@@ -893,6 +924,7 @@ function WordSearch({
           })}
         </div>
       </div>
+      </div>
     </div>
   )
 }
@@ -916,6 +948,7 @@ function LetterMemory({
   difficulty: number
 }) {
   const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
   const pairCount = difficulty === 1 ? 6 : difficulty === 2 ? 8 : 10
   const cols = pairCount <= 6 ? 3 : 4
   const rows = pairCount <= 6 ? 4 : difficulty === 2 ? 4 : 5
@@ -928,7 +961,8 @@ function LetterMemory({
       pairs.push({ id: i * 2 + 1, combo: c.combo, emoji: c.emoji, word: c.word, pairId: i, type: 'word' })
     })
     return shuffle(pairs)
-  }, [pairCount])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pairCount, gameKey])
 
   const [flipped, setFlipped] = useState<number[]>([])
   const [matched, setMatched] = useState<number[]>([])
@@ -999,6 +1033,7 @@ function LetterMemory({
           setAttempts(0)
           setDone(false)
           setTokensEarned(0)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -1007,14 +1042,15 @@ function LetterMemory({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Letter Memory" onBack={onBack} />
-      <p className="text-center font-body text-ink-muted text-sm px-4 mb-3">
+      <div className="flex-1 overflow-auto px-4 pb-4">
+      <p className="text-center font-body text-ink-muted text-sm mb-3">
         Zoek de paren: lettercombinatie + woord
       </p>
 
       <div
-        className="flex-1 flex items-center justify-center px-4 pb-8"
+        className="flex items-center justify-center pb-8"
       >
         <div
           className="gap-2"
@@ -1076,6 +1112,7 @@ function LetterMemory({
           })}
         </div>
       </div>
+      </div>
     </div>
   )
 }
@@ -1091,7 +1128,8 @@ function SentenceBuilder({
 }) {
   const { user } = useAuthStore()
   const TOTAL_ROUNDS = 8
-  const allSentences = useMemo(() => pick(getSentences(difficulty), TOTAL_ROUNDS), [difficulty])
+  const [gameKey, setGameKey] = useState(0)
+  const allSentences = useMemo(() => pick(getSentences(difficulty), TOTAL_ROUNDS), [difficulty, gameKey])
 
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
@@ -1180,6 +1218,7 @@ function SentenceBuilder({
           setScore(0)
           setDone(false)
           setTokensEarned(0)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -1188,11 +1227,11 @@ function SentenceBuilder({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Zinnen bouwen" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
-      <div className="flex-1 flex flex-col px-5 pb-8 gap-5 pt-4">
+      <div className="flex-1 overflow-auto flex flex-col px-5 pb-8 gap-5 pt-4">
         {/* Geplaatste woorden (de zin die gebouwd wordt) */}
         <div
           className="min-h-[80px] rounded-2xl p-4 flex flex-wrap gap-2 items-start"
@@ -1235,19 +1274,28 @@ function SentenceBuilder({
           </AnimatePresence>
         </div>
 
-        {/* Beschikbare woorden */}
+        {/* Beschikbare woorden — draggable + tappable */}
         <div className="flex flex-wrap gap-2 justify-center">
           <AnimatePresence>
             {available.map((item) => (
-              <motion.button
+              <motion.div
                 key={item.id}
                 layout
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.5 }}
+                drag
+                dragSnapToOrigin
+                dragElastic={0.5}
+                onDragEnd={(_e, info) => {
+                  if (Math.abs(info.offset.y) > 40 || Math.abs(info.offset.x) > 40) {
+                    handleWordTap(item)
+                  }
+                }}
+                onTap={() => handleWordTap(item)}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => handleWordTap(item)}
-                className="font-display font-bold px-4 py-3 text-lg"
+                whileDrag={{ scale: 1.1, zIndex: 50 }}
+                className="font-display font-bold px-4 py-3 text-lg cursor-grab active:cursor-grabbing touch-none"
                 style={{
                   borderRadius: '999px',
                   background: 'var(--accent-primary)',
@@ -1256,7 +1304,7 @@ function SentenceBuilder({
                 }}
               >
                 {item.word}
-              </motion.button>
+              </motion.div>
             ))}
           </AnimatePresence>
         </div>
@@ -1276,6 +1324,7 @@ function SpellingBee({
 }) {
   const { user } = useAuthStore()
   const TOTAL_ROUNDS = 10
+  const [gameKey, setGameKey] = useState(0)
   const wordList = useMemo(() => {
     const filtered = SPELLING_WORDS.filter((w) => {
       if (difficulty === 1) return w.word.length <= 4
@@ -1283,7 +1332,8 @@ function SpellingBee({
       return w.word.length >= 5
     })
     return pick(filtered.length >= TOTAL_ROUNDS ? filtered : SPELLING_WORDS, TOTAL_ROUNDS)
-  }, [difficulty])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty, gameKey])
 
   const [round, setRound] = useState(0)
   const [score, setScore] = useState(0)
@@ -1387,6 +1437,8 @@ function SpellingBee({
           setInput([])
           setDone(false)
           setTokensEarned(0)
+          setCorrect(false)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -1395,11 +1447,11 @@ function SpellingBee({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Spellingbij" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
-      <div className="flex-1 flex flex-col items-center justify-between px-4 pb-4 pt-4 gap-4">
+      <div className="flex-1 overflow-auto flex flex-col items-center justify-between px-4 pb-4 pt-4 gap-4">
         {/* Emoji + audio */}
         <div className="flex flex-col items-center gap-3">
           <motion.div
@@ -1519,6 +1571,7 @@ function CategorySort({
   difficulty: number
 }) {
   const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
 
   const catSet = useMemo(() => {
     // Kies een set met het juiste aantal categorieen
@@ -1526,7 +1579,8 @@ function CategorySort({
       difficulty <= 2 ? s.categories.length === 2 : s.categories.length >= 2,
     )
     return validSets[Math.floor(Math.random() * validSets.length)] || CATEGORY_SETS[0]
-  }, [difficulty])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty, gameKey])
 
   const wordsPerCat = difficulty === 1 ? 4 : difficulty === 2 ? 5 : 5
   const categories = useMemo(
@@ -1607,6 +1661,7 @@ function CategorySort({
           setSorted({})
           setDone(false)
           setTokensEarned(0)
+          setGameKey((k) => k + 1)
         }}
         onBack={onBack}
         tokensEarned={tokensEarned}
@@ -1615,7 +1670,7 @@ function CategorySort({
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader
         title="Woorden sorteren"
         round={currentIdx + 1}
@@ -1625,7 +1680,7 @@ function CategorySort({
       />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
-      <div className="flex-1 flex flex-col px-4 pb-8 gap-5 pt-3">
+      <div className="flex-1 overflow-auto flex flex-col px-4 pb-8 gap-5 pt-3">
         {/* Categorieen als knoppen */}
         <div className={`grid gap-3 ${categories.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {categories.map((cat) => {

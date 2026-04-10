@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../../stores/authStore'
 import { api } from '../../../lib/api'
-import { soundCorrect, soundWrong, soundMatch, soundWin, soundPop, soundFlip, soundTap, soundStreak, feedbackCorrect, feedbackWrong, feedbackWin, soundTick, soundPickup, soundDrop, vibrate } from '../../../lib/sounds'
+import { soundCorrect, soundWrong, soundMatch, soundWin, soundPop, soundFlip, soundTap, soundStreak, feedbackCorrect, feedbackWrong, feedbackWin, soundTick, soundPickup, soundDrop, vibrate, isMuted, toggleMute } from '../../../lib/sounds'
 
 // ═══════════════════════════════════════════════════════════════
 // Gedeelde helpers
@@ -34,6 +34,15 @@ function shuffle<T>(arr: T[]): T[] {
 
 function pickRandom<T>(arr: T[]): T {
   return arr[rand(0, arr.length - 1)]
+}
+
+/** Returns a readable text color (dark or white) for a given hex background */
+function textColorForBg(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.55 ? '#3D3229' : '#fff'
 }
 
 /** Stuur tokens naar de backend */
@@ -114,6 +123,20 @@ function StarRating({ stars }: { stars: number }) {
   )
 }
 
+function MuteButton() {
+  const [m, setM] = useState(isMuted())
+  return (
+    <button
+      onClick={() => { const newM = toggleMute(); setM(newM) }}
+      className="w-9 h-9 rounded-full flex items-center justify-center"
+      style={{ background: 'var(--bg-surface)' }}
+      title={m ? 'Geluid aan' : 'Geluid uit'}
+    >
+      {m ? '\uD83D\uDD07' : '\uD83D\uDD0A'}
+    </button>
+  )
+}
+
 /** Eind-scherm na een spel */
 function GameEndScreen({
   score,
@@ -121,12 +144,14 @@ function GameEndScreen({
   gameName,
   onBack,
   childId,
+  onReplay,
 }: {
   score: number
   maxScore: number
   gameName: string
   onBack: () => void
   childId: string
+  onReplay?: () => void
 }) {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
   const stars = pct >= 80 ? 3 : pct >= 50 ? 2 : 1
@@ -145,7 +170,7 @@ function GameEndScreen({
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-screen px-6 text-center"
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center px-6 text-center"
       style={{ background: 'var(--bg-primary)' }}
     >
       <ConfettiBurst active={showConfetti} />
@@ -179,18 +204,35 @@ function GameEndScreen({
         </motion.p>
       </motion.div>
 
-      <button
-        onClick={onBack}
-        className="font-display font-bold py-4 px-10 text-lg"
-        style={{
-          background: 'var(--accent-primary)',
-          color: 'white',
-          borderRadius: 'var(--btn-radius)',
-          minHeight: 56,
-        }}
-      >
-        Terug naar spelletjes
-      </button>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        {onReplay && (
+          <button
+            onClick={onReplay}
+            className="font-display font-bold py-4 px-10 text-lg"
+            style={{
+              background: 'var(--accent-primary)',
+              color: 'white',
+              borderRadius: 'var(--btn-radius)',
+              minHeight: 56,
+            }}
+          >
+            Nog een keer!
+          </button>
+        )}
+        <button
+          onClick={onBack}
+          className="font-display font-bold py-4 px-10 text-lg"
+          style={{
+            background: onReplay ? 'var(--bg-surface)' : 'var(--accent-primary)',
+            color: onReplay ? 'var(--text-muted)' : 'white',
+            borderRadius: 'var(--btn-radius)',
+            minHeight: 56,
+            border: onReplay ? '1px solid var(--border-color)' : 'none',
+          }}
+        >
+          Terug naar spelletjes
+        </button>
+      </div>
     </div>
   )
 }
@@ -287,6 +329,7 @@ function generateMemoryPairs(difficulty: number): MemoryCard[] {
 
 function NumberMemory({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
   const [cards, setCards] = useState<MemoryCard[]>(() => generateMemoryPairs(difficulty))
   const [flippedIds, setFlippedIds] = useState<number[]>([])
   const [matches, setMatches] = useState(0)
@@ -295,6 +338,17 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
   const [isChecking, setIsChecking] = useState(false)
   const [gameOver, setGameOver] = useState(false)
   const totalPairs = cards.length / 2
+
+  const resetGame = useCallback(() => {
+    setCards(generateMemoryPairs(difficulty))
+    setFlippedIds([])
+    setMatches(0)
+    setMoves(0)
+    setShowConfetti(false)
+    setIsChecking(false)
+    setGameOver(false)
+    setGameKey((k) => k + 1)
+  }, [difficulty])
 
   const handleTap = useCallback(
     (id: number) => {
@@ -366,6 +420,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
         gameName="Reken Memory"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
@@ -373,36 +428,31 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
   const cols = cards.length <= 12 ? 4 : cards.length <= 16 ? 4 : 5
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col"
-      style={{ background: 'var(--bg-primary)' }}
-    >
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
+        <MuteButton />
         <ScoreDisplay score={matches} label="Paren" />
       </div>
 
       <p
-        className="font-body text-center text-sm mb-3"
+        className="font-body text-center text-sm mb-2 flex-shrink-0"
         style={{ color: 'var(--text-muted)' }}
       >
         Vind de som en het antwoord! ({moves} zetten)
       </p>
 
       {/* Card grid */}
+      <div className="flex-1 overflow-auto px-4 pb-4">
       <div
         className="grid gap-2 flex-1 content-start mx-auto w-full"
         style={{
@@ -477,6 +527,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
             </motion.div>
           </motion.button>
         ))}
+      </div>
       </div>
     </div>
   )
@@ -572,15 +623,28 @@ function generateBubbles(target: number, difficulty: number): Bubble[] {
 function BubblePopMath({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
   const MAX_TIME = 60
+  const [gameKey, setGameKey] = useState(0)
   const [timeLeft, setTimeLeft] = useState(MAX_TIME)
   const [score, setScore] = useState(0)
-  const [{ target, label }] = useState(() => generateBubbleTarget(difficulty))
+  const [{ target, label }, setTargetInfo] = useState(() => generateBubbleTarget(difficulty))
   const [bubbles, setBubbles] = useState<Bubble[]>(() => generateBubbles(target, difficulty))
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [gameOver, setGameOver] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const animFrameRef = useRef<number>(0)
   const lastTimeRef = useRef(Date.now())
+
+  const resetGame = useCallback(() => {
+    const newTarget = generateBubbleTarget(difficulty)
+    setTargetInfo(newTarget)
+    setBubbles(generateBubbles(newTarget.target, difficulty))
+    setTimeLeft(MAX_TIME)
+    setScore(0)
+    setSelectedId(null)
+    setGameOver(false)
+    setShowConfetti(false)
+    setGameKey((k) => k + 1)
+  }, [difficulty])
 
   // Timer
   useEffect(() => {
@@ -684,10 +748,6 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
   )
 
   if (gameOver) {
-    const maxPossible = bubbles.filter((_, i, arr) => {
-      // Count possible pairs
-      return true
-    }).length
     const maxScore = Math.floor(bubbles.length / 2)
     return (
       <GameEndScreen
@@ -696,33 +756,29 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
         gameName="Bubbels Knallen"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col"
-      style={{ background: 'var(--bg-primary)' }}
-    >
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
+        <MuteButton />
         <ScoreDisplay score={score} />
       </div>
 
+      <div className="flex-1 overflow-auto px-4 pb-4 flex flex-col">
       <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} />
 
       <p
@@ -757,12 +813,12 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
                 width: bubble.size,
                 height: bubble.size,
                 background: bubble.color,
-                color: 'white',
+                color: textColorForBg(bubble.color),
                 fontSize: bubble.size > 64 ? 22 : 18,
                 border:
                   selectedId === bubble.id
                     ? '4px solid var(--text-primary)'
-                    : '3px solid rgba(255,255,255,0.4)',
+                    : `3px solid ${textColorForBg(bubble.color) === '#fff' ? 'rgba(255,255,255,0.4)' : 'rgba(61,50,41,0.2)'}`,
                 boxShadow:
                   selectedId === bubble.id
                     ? '0 0 0 4px rgba(232,115,74,0.3)'
@@ -801,6 +857,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
               />
             ))}
         </AnimatePresence>
+      </div>
       </div>
     </div>
   )
@@ -880,7 +937,7 @@ function generateDragRounds(difficulty: number): DragRound[] {
 
 function DragEquation({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
-  const [rounds] = useState(() => generateDragRounds(difficulty))
+  const [rounds, setRounds] = useState(() => generateDragRounds(difficulty))
   const [currentRound, setCurrentRound] = useState(0)
   const [score, setScore] = useState(0)
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
@@ -890,6 +947,16 @@ function DragEquation({ onBack, difficulty }: GameProps) {
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 })
   const [slotRect, setSlotRect] = useState<DOMRect | null>(null)
   const slotRef = useRef<HTMLDivElement>(null)
+
+  const resetGame = useCallback(() => {
+    setRounds(generateDragRounds(difficulty))
+    setCurrentRound(0)
+    setScore(0)
+    setFeedback(null)
+    setShowConfetti(false)
+    setGameOver(false)
+    setDraggedValue(null)
+  }, [difficulty])
 
   const round = rounds[currentRound]
 
@@ -933,6 +1000,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
         gameName="Sleep de Som"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
@@ -942,31 +1010,28 @@ function DragEquation({ onBack, difficulty }: GameProps) {
   const displayResult = round.result !== -1 ? round.result : null
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col"
-      style={{ background: 'var(--bg-primary)' }}
-    >
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
-        <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
-          {currentRound + 1} / {rounds.length}
-        </p>
-        <ScoreDisplay score={score} />
+        <MuteButton />
+        <div className="flex items-center gap-2">
+          <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
+            {currentRound + 1} / {rounds.length}
+          </p>
+          <ScoreDisplay score={score} />
+        </div>
       </div>
 
+      <div className="flex-1 overflow-auto px-4 pb-4 flex flex-col">
       {/* Progress dots */}
       <div className="flex gap-1 justify-center mb-6">
         {rounds.map((_, i) => (
@@ -1175,6 +1240,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
           </motion.button>
         ))}
       </div>
+      </div>
     </div>
   )
 }
@@ -1288,13 +1354,23 @@ function generatePatternRounds(difficulty: number): PatternRound[] {
 
 function PatternComplete({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
-  const [rounds] = useState(() => generatePatternRounds(difficulty))
+  const [rounds, setRounds] = useState(() => generatePatternRounds(difficulty))
   const [currentRound, setCurrentRound] = useState(0)
   const [score, setScore] = useState(0)
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
   const [showConfetti, setShowConfetti] = useState(false)
   const [gameOver, setGameOver] = useState(false)
+
+  const resetGame = useCallback(() => {
+    setRounds(generatePatternRounds(difficulty))
+    setCurrentRound(0)
+    setScore(0)
+    setFeedback(null)
+    setSelectedOption(null)
+    setShowConfetti(false)
+    setGameOver(false)
+  }, [difficulty])
 
   const round = rounds[currentRound]
 
@@ -1336,36 +1412,34 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
         gameName="Patroon Afmaken"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col"
-      style={{ background: 'var(--bg-primary)' }}
-    >
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
-        <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
-          {currentRound + 1} / {rounds.length}
-        </p>
-        <ScoreDisplay score={score} />
+        <MuteButton />
+        <div className="flex items-center gap-2">
+          <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
+            {currentRound + 1} / {rounds.length}
+          </p>
+          <ScoreDisplay score={score} />
+        </div>
       </div>
 
+      <div className="flex-1 overflow-auto px-4 pb-4 flex flex-col">
       {/* Instruction */}
       <p
         className="font-display font-bold text-center text-xl mb-6"
@@ -1503,6 +1577,7 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
           )
         })}
       </div>
+      </div>
     </div>
   )
 }
@@ -1570,6 +1645,7 @@ function PizzaSlice({
 
 function FractionPizza({ onBack, difficulty }: GameProps) {
   const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
   const allRounds = useMemo(() => {
     const base = [...PIZZA_ROUNDS]
     if (difficulty >= 2) {
@@ -1585,7 +1661,8 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
       )
     }
     return shuffle(base).slice(0, difficulty === 1 ? 6 : 8)
-  }, [difficulty])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty, gameKey])
 
   const [currentRound, setCurrentRound] = useState(0)
   const [coloredSlices, setColoredSlices] = useState<Set<number>>(new Set())
@@ -1593,6 +1670,16 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
   const [score, setScore] = useState(0)
   const [showConfetti, setShowConfetti] = useState(false)
   const [gameOver, setGameOver] = useState(false)
+
+  const resetGame = useCallback(() => {
+    setCurrentRound(0)
+    setColoredSlices(new Set())
+    setFeedback(null)
+    setScore(0)
+    setShowConfetti(false)
+    setGameOver(false)
+    setGameKey((k) => k + 1)
+  }, [])
 
   const round = allRounds[currentRound]
   const radius = 130
@@ -1645,36 +1732,34 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
         gameName="Pizza Breuken"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col items-center"
-      style={{ background: 'var(--bg-primary)' }}
-    >
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between w-full mb-4">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
-        <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
-          {currentRound + 1} / {allRounds.length}
-        </p>
-        <ScoreDisplay score={score} />
+        <MuteButton />
+        <div className="flex items-center gap-2">
+          <p className="font-body text-sm" style={{ color: 'var(--text-muted)' }}>
+            {currentRound + 1} / {allRounds.length}
+          </p>
+          <ScoreDisplay score={score} />
+        </div>
       </div>
 
+      <div className="flex-1 overflow-auto px-4 pb-4 flex flex-col items-center">
       {/* Instruction */}
       <motion.div
         key={currentRound}
@@ -1780,6 +1865,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
       >
         {feedback === 'correct' ? 'Goed zo!' : 'Controleer'}
       </button>
+      </div>
     </div>
   )
 }
@@ -1882,6 +1968,19 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
   const [showStreak, setShowStreak] = useState(false)
   const [totalAnswered, setTotalAnswered] = useState(0)
 
+  const resetGame = useCallback(() => {
+    setTimeLeft(MAX_TIME)
+    setScore(0)
+    setStreak(0)
+    setMaxStreak(0)
+    setProblem(generateSpeedProblem(0, difficulty))
+    setFeedback(null)
+    setSelectedOption(null)
+    setGameOver(false)
+    setShowStreak(false)
+    setTotalAnswered(0)
+  }, [difficulty])
+
   // Timer
   useEffect(() => {
     if (gameOver) return
@@ -1943,31 +2042,27 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
         gameName="Rekenrace"
         onBack={onBack}
         childId={user?.id ?? ''}
+        onReplay={resetGame}
       />
     )
   }
 
   return (
-    <div
-      className="min-h-screen px-4 pt-4 pb-6 flex flex-col"
-      style={{ background: 'var(--bg-primary)' }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
           onClick={onBack}
-          className="font-display font-bold text-base px-4 py-2 rounded-full"
-          style={{
-            background: 'var(--bg-surface)',
-            color: 'var(--text-primary)',
-            minHeight: 48,
-          }}
+          className="font-display font-bold text-sm px-3 py-1.5 rounded-full"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
         >
           {'\u2190'} Terug
         </button>
+        <MuteButton />
         <ScoreDisplay score={score} />
       </div>
 
+      <div className="flex-1 overflow-auto px-4 pb-4 flex flex-col">
       <TimerBar timeLeft={timeLeft} maxTime={MAX_TIME} />
 
       {/* Streak indicator */}
@@ -2076,6 +2171,7 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
             )
           })}
         </div>
+      </div>
       </div>
     </div>
   )

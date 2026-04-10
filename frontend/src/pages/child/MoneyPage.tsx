@@ -91,12 +91,12 @@ export function MoneyPage() {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="rounded-3xl p-6 mb-5 text-center"
-        style={{ background: 'linear-gradient(135deg, #F2C94C, #E8734A)', color: 'white' }}
+        style={{ background: 'linear-gradient(135deg, #F2C94C, #E8734A)', color: 'var(--text-primary)' }}
       >
-        <p className="font-body text-white/80 text-sm mb-1">Mijn saldo</p>
+        <p className="font-body text-sm mb-1" style={{ color: 'var(--text-primary)', opacity: 0.7 }}>Mijn saldo</p>
         <p className="font-display font-bold text-5xl mb-2">{formatCents(balance)}</p>
         {earnedToday > 0 && (
-          <p className="font-body text-white/80 text-sm">+{formatCents(earnedToday)} vandaag verdiend 🎉</p>
+          <p className="font-body text-sm" style={{ color: 'var(--text-primary)', opacity: 0.7 }}>+{formatCents(earnedToday)} vandaag verdiend 🎉</p>
         )}
       </motion.div>
 

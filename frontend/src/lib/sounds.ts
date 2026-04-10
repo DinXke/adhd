@@ -3,6 +3,11 @@
  * Geen externe bestanden nodig, werkt op alle apparaten
  */
 
+let muted = false
+export function isMuted() { return muted }
+export function setMuted(m: boolean) { muted = m }
+export function toggleMute() { muted = !muted; return muted }
+
 let audioCtx: AudioContext | null = null
 
 function getCtx(): AudioContext {
@@ -56,31 +61,37 @@ function playNotes(notes: [number, number][], type: OscillatorType = 'sine', vol
 
 /** Correct antwoord — vrolijk belletje omhoog */
 export function soundCorrect() {
+  if (muted) return
   playNotes([[523, 0.1], [659, 0.1], [784, 0.15]], 'sine', 0.25)
 }
 
 /** Fout antwoord — zacht laag geluidje */
 export function soundWrong() {
+  if (muted) return
   playTone(220, 0.2, 'triangle', 0.15)
 }
 
 /** Token verdiend — bling! */
 export function soundToken() {
+  if (muted) return
   playNotes([[880, 0.08], [1108, 0.08], [1318, 0.12]], 'sine', 0.2)
 }
 
 /** Klik/tik — subtiel tikgeluid */
 export function soundTap() {
+  if (muted) return
   playTone(800, 0.05, 'sine', 0.1)
 }
 
 /** Match gevonden (memory) — twee tonen omhoog */
 export function soundMatch() {
+  if (muted) return
   playNotes([[440, 0.1], [660, 0.15]], 'sine', 0.2)
 }
 
 /** Spelletje gewonnen — feestelijke melodie */
 export function soundWin() {
+  if (muted) return
   playNotes([
     [523, 0.12], [587, 0.12], [659, 0.12], [784, 0.12],
     [880, 0.2], [784, 0.1], [880, 0.3],
@@ -89,21 +100,25 @@ export function soundWin() {
 
 /** Level compleet — kort fanfare */
 export function soundLevelUp() {
+  if (muted) return
   playNotes([[659, 0.1], [784, 0.1], [988, 0.2]], 'sine', 0.25)
 }
 
 /** Streak bonus — oplopende tonen */
 export function soundStreak() {
+  if (muted) return
   playNotes([[440, 0.06], [554, 0.06], [659, 0.06], [880, 0.1]], 'triangle', 0.2)
 }
 
 /** Hint weergegeven — zacht belletje */
 export function soundHint() {
+  if (muted) return
   playNotes([[660, 0.15], [550, 0.15]], 'sine', 0.12)
 }
 
 /** Bubbel poppen — kort plop */
 export function soundPop() {
+  if (muted) return
   try {
     const ctx = getCtx()
     const osc = ctx.createOscillator()
@@ -122,26 +137,31 @@ export function soundPop() {
 
 /** Kaart flippen — kort klik */
 export function soundFlip() {
+  if (muted) return
   playTone(1200, 0.04, 'sine', 0.12)
 }
 
 /** Slepen / oppakken */
 export function soundPickup() {
+  if (muted) return
   playTone(600, 0.06, 'triangle', 0.1)
 }
 
 /** Neerleggen / droppen */
 export function soundDrop() {
+  if (muted) return
   playTone(400, 0.08, 'triangle', 0.15)
 }
 
 /** Countdown tik */
 export function soundTick() {
+  if (muted) return
   playTone(1000, 0.03, 'square', 0.08)
 }
 
 /** Timer bijna op — waarschuwing */
 export function soundWarning() {
+  if (muted) return
   playNotes([[440, 0.1], [380, 0.15]], 'sawtooth', 0.1)
 }
 
