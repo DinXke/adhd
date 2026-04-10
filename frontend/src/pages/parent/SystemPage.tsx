@@ -311,7 +311,23 @@ export function SystemPage() {
         </div>
         <div className="flex gap-3 flex-wrap">
           <button
-            onClick={() => { window.location.assign('/api/trmnl/plugin.zip') }}
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/trmnl/plugin.zip')
+                if (!response.ok) throw new Error('Download mislukt')
+                const blob = await response.blob()
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.download = 'grip-trmnl-plugin.zip'
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(url)
+              } catch (e) {
+                alert('Download mislukt. Probeer opnieuw.')
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:opacity-90"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

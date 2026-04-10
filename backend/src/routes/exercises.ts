@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma'
+import { redis } from '../lib/redis'
 import { requireAuth, requireParent } from '../middleware/auth'
 import { Subject, ExerciseType } from '@prisma/client'
 import { generateExercises, generateHint, hasClaudeKey } from '../lib/claude'
@@ -378,4 +379,150 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
     })
     return { exercises }
   })
+
+  // ── POST /api/exercises/auto-schedule — Schema opslaan ───────
+  fastify.post('/auto-schedule', { preHandler: requireParent }, async (request, reply) => {
+    const { childId, enabled, subjects, intervalHours = 24 } = request.body as {
+      childId: string
+      enabled: boolean
+      subjects: { subject: string; theme: string; difficulty: number; count: number }[]
+      intervalHours?: number
+    }
+
+    if (!childId) return reply.status(400).send({ error: 'childId is verplicht' })
+
+    const key = `exercise-schedule:${childId}`
+    const config = {
+      enabled,
+      subjects,
+      intervalHours,
+      lastRun: null as string | null,
+      updatedAt: new Date().toISOString(),
+      updatedBy: request.user.sub,
+    }
+
+    // Preserve lastRun from existing config
+    const existing = await redis.get(key)
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing)
+        config.lastRun = parsed.lastRun ?? null
+      } catch {}
+    }
+
+    await redis.set(key, JSON.stringify(config))
+    return { ok: true, config }
+  })
+
+  // ── GET /api/exercises/auto-schedule/:childId — Config lezen ──
+  fastify.get('/auto-schedule/:childId', { preHandler: requireParent }, async (request) => {
+    const { childId } = request.params as { childId: string }
+    const raw = await redis.get(`exercise-schedule:${childId}`)
+    if (!raw) return { config: null }
+    try {
+      return { config: JSON.parse(raw) }
+    } catch {
+      return { config: null }
+    }
+  })
+
+  // ── DELETE /api/exercises/auto-schedule/:childId — Uitschakelen
+  fastify.delete('/auto-schedule/:childId', { preHandler: requireParent }, async (request) => {
+    const { childId } = request.params as { childId: string }
+    await redis.del(`exercise-schedule:${childId}`)
+    return { ok: true }
+  })
+}
+
+// ── Auto-schedule runner (exported for use in index.ts) ────────
+export async function runAutoSchedules() {
+  if (!hasClaudeKey()) return
+
+  // Scan for all exercise-schedule:* keys
+  let cursor = '0'
+  const keys: string[] = []
+  do {
+    const [nextCursor, found] = await redis.scan(cursor, 'MATCH', 'exercise-schedule:*', 'COUNT', 100)
+    cursor = nextCursor
+    keys.push(...found)
+  } while (cursor !== '0')
+
+  for (const key of keys) {
+    const raw = await redis.get(key)
+    if (!raw) continue
+
+    let config: {
+      enabled: boolean
+      subjects: { subject: string; theme: string; difficulty: number; count: number }[]
+      intervalHours: number
+      lastRun: string | null
+      updatedAt: string
+      updatedBy: string
+    }
+    try {
+      config = JSON.parse(raw)
+    } catch {
+      continue
+    }
+
+    if (!config.enabled || !config.subjects?.length) continue
+
+    // Check if enough time has passed since lastRun
+    const now = Date.now()
+    if (config.lastRun) {
+      const lastRunTime = new Date(config.lastRun).getTime()
+      const intervalMs = (config.intervalHours ?? 24) * 60 * 60 * 1000
+      if (now - lastRunTime < intervalMs) continue
+    }
+
+    const childId = key.replace('exercise-schedule:', '')
+
+    // Generate exercises for each subject config
+    for (const sub of config.subjects) {
+      try {
+        const generated = await generateExercises({
+          subject: sub.subject,
+          theme: sub.theme,
+          difficulty: Math.min(5, Math.max(1, sub.difficulty)),
+          count: Math.min(10, sub.count),
+        })
+
+        await Promise.all(
+          generated.map((ex) =>
+            prisma.exercise.create({
+              data: {
+                subject: sub.subject as Subject,
+                type: (ex.type as ExerciseType) ?? ExerciseType.multiple_choice,
+                difficulty: sub.difficulty,
+                title: ex.title,
+                questionJson: ex as any,
+                tags: ex.tags ?? [],
+                isAiGenerated: true,
+                isApproved: false,
+                generatedBy: 'claude-haiku-4-5-auto',
+                createdById: config.updatedBy,
+              },
+            })
+          )
+        )
+
+        console.log(`[auto-schedule] Generated ${generated.length} exercises for child ${childId}, subject ${sub.subject}`)
+      } catch (err) {
+        console.error(`[auto-schedule] Failed for child ${childId}, subject ${sub.subject}:`, err)
+      }
+    }
+
+    // Update lastRun
+    config.lastRun = new Date().toISOString()
+    await redis.set(key, JSON.stringify(config))
+
+    // Notify admins
+    sendPushToAdmins({
+      title: 'Automatische oefeningen gegenereerd',
+      body: `${config.subjects.reduce((s, sub) => s + sub.count, 0)} oefeningen wachten op review.`,
+      icon: '/icons/icon-192.png',
+      tag: 'exercise-review',
+      url: '/dashboard/exercises/review',
+    }).catch(() => {})
+  }
 }

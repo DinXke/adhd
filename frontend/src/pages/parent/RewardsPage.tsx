@@ -35,10 +35,20 @@ function RewardForm({
   const [requiresApproval, setRequiresApproval] = useState(initial?.requiresApproval ?? true)
   const [category, setCategory] = useState(initial?.category ?? '')
 
+  // Spaarpot-beloning: extract money amount from description if present
+  const initialIsSpaarpot = initial?.category === 'spaarpot' && (initial?.description ?? '').startsWith('MONEY:')
+  const initialMoneyAmount = initialIsSpaarpot ? parseInt((initial?.description ?? '').replace('MONEY:', ''), 10) || 0 : 0
+  const [isSpaarpot, setIsSpaarpot] = useState(initialIsSpaarpot)
+  const [moneyAmountCents, setMoneyAmountCents] = useState(initialMoneyAmount)
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || cost < 1) return
-    onSave({ title: title.trim(), description: description.trim() || undefined, costTokens: cost, requiresApproval, category: category.trim() || undefined })
+    const finalCategory = isSpaarpot ? 'spaarpot' : (category.trim() || undefined)
+    const finalDescription = isSpaarpot
+      ? `MONEY:${moneyAmountCents}`
+      : (description.trim() || undefined)
+    onSave({ title: title.trim(), description: finalDescription, costTokens: cost, requiresApproval, category: finalCategory })
   }
 
   const inputStyle = {
@@ -62,18 +72,6 @@ function RewardForm({
           onChange={(e) => setTitle(e.target.value)}
           required
           placeholder="Bijv. 15 min extra schermtijd"
-          style={inputStyle}
-          onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
-          onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
-        />
-      </div>
-
-      <div>
-        <label className="font-body text-sm font-medium text-ink mb-1 block">Omschrijving</label>
-        <input
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optionele toelichting"
           style={inputStyle}
           onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
           onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
@@ -110,17 +108,76 @@ function RewardForm({
         </div>
       </div>
 
-      <div>
-        <label className="font-body text-sm font-medium text-ink mb-1 block">Categorie</label>
-        <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="bijv. schermtijd, activiteit, cadeau"
-          style={inputStyle}
-          onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
-          onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
-        />
+      {!isSpaarpot && (
+        <div>
+          <label className="font-body text-sm font-medium text-ink mb-1 block">Categorie</label>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="bijv. schermtijd, activiteit, cadeau"
+            style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
+            onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
+          />
+        </div>
+      )}
+
+      {/* Spaarpot-beloning toggle */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setIsSpaarpot(!isSpaarpot)}
+          className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+          style={{
+            background: isSpaarpot ? 'var(--accent-primary)' : 'var(--bg-primary)',
+            border: `2px solid ${isSpaarpot ? 'var(--accent-primary)' : 'var(--border-color)'}`,
+          }}
+        >
+          {isSpaarpot && <span style={{ color: 'white', fontSize: 14 }}>✓</span>}
+        </button>
+        <span className="font-body text-sm text-ink">
+          Spaarpot-beloning (geld toevoegen bij inwisselen)
+        </span>
       </div>
+
+      {isSpaarpot && (
+        <div>
+          <label className="font-body text-sm font-medium text-ink mb-1 block">
+            Bedrag (EUR)
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="font-body text-ink font-medium" style={{ fontSize: 15 }}>€</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={moneyAmountCents}
+              onChange={(e) => setMoneyAmountCents(Math.max(0, parseInt(e.target.value, 10) || 0))}
+              placeholder="150"
+              style={{ ...inputStyle, width: 120 }}
+              onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
+              onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
+            />
+            <span className="font-body text-ink-muted text-sm">
+              cent = €{(moneyAmountCents / 100).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!isSpaarpot && (
+        <div>
+          <label className="font-body text-sm font-medium text-ink mb-1 block">Omschrijving</label>
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Optionele toelichting"
+            style={inputStyle}
+            onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
+            onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-3">
         <button

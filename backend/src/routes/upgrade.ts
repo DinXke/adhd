@@ -5,7 +5,8 @@
 import { FastifyInstance } from 'fastify'
 import { execFile, spawn, exec } from 'child_process'
 import { promisify } from 'util'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, createReadStream } from 'fs'
+import path from 'path'
 import { requireAuth } from '../middleware/auth'
 
 const execAsync = promisify(exec)
@@ -15,6 +16,10 @@ const UPGRADE_SCRIPT = `${APP_DIR}/scripts/upgrade.sh`
 const RESULT_FILE = `${APP_DIR}/.upgrade-result`
 const VERSION_FILE = `${APP_DIR}/.version`
 const COMPOSE_FILE = `${APP_DIR}/docker-compose.yml`
+const BACKUP_DIR = '/tmp/grip-backups'
+
+// Ensure backup directory exists
+mkdirSync(BACKUP_DIR, { recursive: true })
 
 // Detect mode: bare-metal (upgrade.sh exists) or Docker
 const isDocker = !existsSync(UPGRADE_SCRIPT) && existsSync('/.dockerenv')
@@ -136,26 +141,62 @@ export async function upgradeRoutes(fastify: FastifyInstance) {
   // ── POST /api/admin/system/backup ────────────────────────────
   fastify.post('/api/admin/system/backup', { preHandler: requireAdmin }, async (_, reply) => {
     try {
-      // pg_dump via the db container
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const backupPath = `/tmp/grip-backup-${timestamp}.sql`
+      const backupFile = `grip-backup-${timestamp}.sql.gz`
+      const backupPath = path.join(BACKUP_DIR, backupFile)
       await execAsync(
-        `docker compose -f ${COMPOSE_FILE} exec -T db pg_dump -U grip grip > ${backupPath}`,
+        `pg_dump "${process.env.DATABASE_URL}" | gzip > "${backupPath}"`,
         { timeout: 120000 }
       )
-      return { ok: true, path: backupPath }
+      return { ok: true, path: backupPath, filename: backupFile }
     } catch (err: any) {
-      // Fallback: try direct pg_dump if DATABASE_URL available
-      try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-        const { stdout } = await execAsync(
-          `pg_dump "${process.env.DATABASE_URL}" 2>/dev/null | head -1`,
-          { timeout: 5000 }
-        )
-        return { ok: false, error: 'Backup via Docker niet mogelijk. Gebruik: docker compose exec db pg_dump -U grip grip > backup.sql' }
-      } catch {
-        return reply.status(500).send({ error: 'Backup mislukt. Voer handmatig uit op de host.' })
-      }
+      return reply.status(500).send({ error: `Backup mislukt: ${err.message?.slice(0, 200) ?? 'onbekende fout'}` })
     }
+  })
+
+  // ── GET /api/admin/system/backups — Lijst van backups ────────
+  fastify.get('/api/admin/system/backups', { preHandler: requireAdmin }, async () => {
+    mkdirSync(BACKUP_DIR, { recursive: true })
+    try {
+      const files = readdirSync(BACKUP_DIR)
+        .filter((f) => f.startsWith('grip-backup-'))
+        .map((name) => {
+          const filePath = path.join(BACKUP_DIR, name)
+          const stats = statSync(filePath)
+          return {
+            name,
+            sizeBytes: stats.size,
+            date: stats.mtime.toISOString(),
+          }
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      return { backups: files }
+    } catch {
+      return { backups: [] }
+    }
+  })
+
+  // ── GET /api/admin/system/backups/:filename — Download backup ─
+  fastify.get('/api/admin/system/backups/:filename', { preHandler: requireAdmin }, async (request, reply) => {
+    const { filename } = request.params as { filename: string }
+
+    // Sanitize: only allow expected backup filenames (no path traversal)
+    if (!filename.startsWith('grip-backup-') || filename.includes('/') || filename.includes('..')) {
+      return reply.status(400).send({ error: 'Ongeldig bestandsnaam' })
+    }
+
+    const filePath = path.join(BACKUP_DIR, filename)
+    if (!existsSync(filePath)) {
+      return reply.status(404).send({ error: 'Backup niet gevonden' })
+    }
+
+    const stats = statSync(filePath)
+    const stream = createReadStream(filePath)
+
+    return reply
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .header('Content-Type', 'application/gzip')
+      .header('Content-Length', stats.size)
+      .send(stream)
   })
 }

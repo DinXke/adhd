@@ -228,6 +228,224 @@ function StatsPanel() {
   )
 }
 
+// ── Auto-schedule panel ───────────────────────────────────────
+function AutoSchedulePanel() {
+  const { data: childrenData } = useMyChildren()
+  const children = childrenData?.children ?? []
+  const qc = useQueryClient()
+
+  const [childId, setChildId] = useState('')
+  const activeChildId = childId || children[0]?.id || ''
+
+  const { data: scheduleData, isLoading: scheduleLoading } = useQuery({
+    queryKey: ['exercise-auto-schedule', activeChildId],
+    queryFn: () => api.get<{ config: any }>(`/api/exercises/auto-schedule/${activeChildId}`),
+    enabled: !!activeChildId,
+  })
+
+  const [enabled, setEnabled] = useState(false)
+  const [subjects, setSubjects] = useState<{ subject: string; theme: string; difficulty: number; count: number }[]>([
+    { subject: 'wiskunde', theme: 'Tafels', difficulty: 2, count: 5 },
+  ])
+  const [intervalHours, setIntervalHours] = useState(24)
+  const [initialized, setInitialized] = useState(false)
+
+  // Sync state from server
+  const config = scheduleData?.config
+  if (config && !initialized) {
+    setEnabled(config.enabled ?? false)
+    if (config.subjects?.length) setSubjects(config.subjects)
+    if (config.intervalHours) setIntervalHours(config.intervalHours)
+    setInitialized(true)
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: () => api.post('/api/exercises/auto-schedule', {
+      childId: activeChildId,
+      enabled,
+      subjects,
+      intervalHours,
+    }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercise-auto-schedule', activeChildId] }),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/api/exercises/auto-schedule/${activeChildId}`),
+    onSuccess: () => {
+      setEnabled(false)
+      qc.invalidateQueries({ queryKey: ['exercise-auto-schedule', activeChildId] })
+    },
+  })
+
+  const updateSubject = (idx: number, field: string, value: any) => {
+    setSubjects(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
+  }
+
+  const addSubject = () => {
+    setSubjects(prev => [...prev, { subject: 'wiskunde', theme: '', difficulty: 2, count: 5 }])
+  }
+
+  const removeSubject = (idx: number) => {
+    setSubjects(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  return (
+    <div className="card p-5 space-y-4 mb-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold text-ink text-base">Automatisch genereren</h2>
+          <p className="text-xs text-ink-muted mt-0.5">Laat oefeningen automatisch op interval genereren.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEnabled(!enabled)}
+          className="relative w-12 h-7 rounded-full transition-colors"
+          style={{ background: enabled ? 'var(--accent-success)' : 'var(--border-color)' }}
+        >
+          <span
+            className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform"
+            style={{ left: enabled ? 22 : 2 }}
+          />
+        </button>
+      </div>
+
+      {enabled && (
+        <>
+          {children.length > 1 && (
+            <div>
+              <label className="text-xs font-medium text-ink-muted mb-1 block">Voor</label>
+              <select
+                value={activeChildId}
+                onChange={e => { setChildId(e.target.value); setInitialized(false) }}
+                className="w-full px-3 py-2 rounded-xl border border-border bg-card text-sm text-ink focus:border-accent focus:outline-none"
+              >
+                {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Subject configs */}
+          <div className="space-y-3">
+            {subjects.map((sub, idx) => (
+              <div key={idx} className="p-3 rounded-xl border border-border bg-surface space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ink">Vak {idx + 1}</span>
+                  {subjects.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSubject(idx)}
+                      className="text-xs text-ink-muted hover:text-red-500"
+                    >
+                      Verwijder
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={sub.subject}
+                    onChange={e => updateSubject(idx, 'subject', e.target.value)}
+                    className="px-2 py-1.5 rounded-lg border border-border bg-card text-sm text-ink"
+                  >
+                    {Object.entries(SUBJECT_LABELS).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                  <input
+                    value={sub.theme}
+                    onChange={e => updateSubject(idx, 'theme', e.target.value)}
+                    placeholder="Thema"
+                    className="px-2 py-1.5 rounded-lg border border-border bg-card text-sm text-ink"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-ink-muted">Niveau (1-5)</label>
+                    <select
+                      value={sub.difficulty}
+                      onChange={e => updateSubject(idx, 'difficulty', Number(e.target.value))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-border bg-card text-sm text-ink"
+                    >
+                      {[1,2,3,4,5].map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-ink-muted">Aantal</label>
+                    <input
+                      type="number"
+                      min={1} max={20}
+                      value={sub.count}
+                      onChange={e => updateSubject(idx, 'count', Number(e.target.value))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-border bg-card text-sm text-ink"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addSubject}
+              className="text-xs text-accent hover:underline"
+            >
+              + Vak toevoegen
+            </button>
+          </div>
+
+          {/* Interval selector */}
+          <div>
+            <label className="text-xs font-medium text-ink-muted mb-1 block">Interval</label>
+            <select
+              value={intervalHours}
+              onChange={e => setIntervalHours(Number(e.target.value))}
+              className="px-3 py-2 rounded-xl border border-border bg-card text-sm text-ink focus:border-accent focus:outline-none"
+            >
+              <option value={12}>Elke 12 uur</option>
+              <option value={24}>Elke 24 uur</option>
+              <option value={48}>Elke 2 dagen</option>
+              <option value={168}>Elke week</option>
+            </select>
+          </div>
+
+          {/* Status */}
+          {config?.lastRun && (
+            <p className="text-xs text-ink-muted">
+              Laatst uitgevoerd: {new Date(config.lastRun).toLocaleString('nl-BE')}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+              className="flex-1 py-2.5 rounded-xl bg-accent text-white text-sm font-medium disabled:opacity-50"
+            >
+              {saveMutation.isPending ? 'Opslaan...' : 'Schema opslaan'}
+            </button>
+            {config && (
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2.5 rounded-xl border border-border text-ink-muted text-sm hover:border-red-400 hover:text-red-500 disabled:opacity-50"
+              >
+                Verwijderen
+              </button>
+            )}
+          </div>
+
+          {saveMutation.isSuccess && (
+            <p className="text-xs text-accent-success">Schema opgeslagen.</p>
+          )}
+        </>
+      )}
+
+      {!enabled && config?.enabled && (
+        <p className="text-xs text-ink-muted">
+          Automatisch genereren is momenteel ingeschakeld. Schakel hierboven uit om te stoppen.
+        </p>
+      )}
+    </div>
+  )
+}
+
 const TYPE_LABELS: Record<string, string> = {
   multiple_choice: 'Meerkeuze',
   fill_in: 'Invullen',
@@ -394,6 +612,7 @@ export function ExercisesReviewPage() {
         {tab === 'generate' && (
           <motion.div key="generate" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
             <GeneratePanel />
+            <AutoSchedulePanel />
           </motion.div>
         )}
 

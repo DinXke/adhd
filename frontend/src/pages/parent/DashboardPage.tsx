@@ -4,7 +4,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
-import { useMyChildren, useDashboardOverview, useGenerateWeekReport, useLatestWeekReport } from '../../lib/queries'
+import { useMyChildren, useDashboardOverview, useGenerateWeekReport, useLatestWeekReport, usePendingExercises } from '../../lib/queries'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import {
@@ -179,10 +180,12 @@ function WeekReportPanel({ childId }: { childId: string }) {
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { data: childrenData } = useMyChildren()
+  const { data: pendingData } = usePendingExercises()
   const [selectedChildId, setSelectedChildId] = useState('')
 
   const children = childrenData?.children ?? []
   const childId = selectedChildId || children[0]?.id
+  const pendingCount = pendingData?.exercises?.length ?? 0
 
   const { data, isLoading, error } = useDashboardOverview(childId)
 
@@ -223,6 +226,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 print:space-y-4">
+      {/* Pending exercises banner */}
+      {pendingCount > 0 && (
+        <Link
+          to="/dashboard/exercises/review"
+          className="block rounded-2xl px-4 py-3 transition-opacity hover:opacity-90"
+          style={{
+            background: 'linear-gradient(135deg, rgba(212,151,59,0.12), rgba(212,151,59,0.06))',
+            border: '1px solid rgba(212,151,59,0.25)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg">📋</span>
+            <span className="font-body font-medium text-sm" style={{ color: 'var(--accent-warning, #D4973B)' }}>
+              {pendingCount} oefening{pendingCount !== 1 ? 'en' : ''} wacht{pendingCount === 1 ? '' : 'en'} op review
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="ml-auto" style={{ color: 'var(--accent-warning, #D4973B)' }}>
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </div>
+        </Link>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

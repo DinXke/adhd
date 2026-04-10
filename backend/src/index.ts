@@ -14,7 +14,7 @@ import { taskRoutes } from './routes/tasks'
 import { tokenRoutes } from './routes/tokens'
 import { emotionRoutes } from './routes/emotions'
 import { tokenSettingsRoutes, getExtraAllowedOrigins } from './routes/settings'
-import { exerciseRoutes } from './routes/exercises'
+import { exerciseRoutes, runAutoSchedules } from './routes/exercises'
 import { inviteRoutes } from './routes/invites'
 import { communicationRoutes } from './routes/communication'
 import { dossierRoutes } from './routes/dossier'
@@ -146,6 +146,13 @@ async function main() {
 
   await app.listen({ port: 3001, host: '0.0.0.0' })
   app.log.info('GRIP backend gestart op poort 3001')
+
+  // Auto-schedule: check every hour for exercise generation schedules
+  setInterval(() => {
+    runAutoSchedules().catch((err) => {
+      app.log.error({ err }, '[auto-schedule] Fout bij uitvoeren van auto-schedule')
+    })
+  }, 60 * 60 * 1000) // every hour
 }
 
 main().catch((err) => {

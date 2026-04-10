@@ -176,13 +176,31 @@ export async function tokenRoutes(fastify: FastifyInstance) {
       },
     })
 
+    // Spaarpot-beloning: voeg geld toe aan spaarpotje
+    let moneyAdded: number | null = null
+    if (reward.category === 'spaarpot' && reward.description?.startsWith('MONEY:')) {
+      const parsedAmount = parseInt(reward.description.replace('MONEY:', ''), 10)
+      if (parsedAmount > 0) {
+        await prisma.moneyTransaction.create({
+          data: {
+            childId,
+            amount: parsedAmount,
+            type: 'earning',
+            note: `Beloning: ${reward.title}`,
+            grantedBy: user.sub,
+          },
+        })
+        moneyAdded = parsedAmount
+      }
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: user.sub,
         action: 'reward.redeem',
         entityType: 'reward',
         entityId: rewardId,
-        metadata: { rewardTitle: reward.title, costTokens: reward.costTokens, childId },
+        metadata: { rewardTitle: reward.title, costTokens: reward.costTokens, childId, moneyAdded },
       },
     })
 
@@ -190,6 +208,7 @@ export async function tokenRoutes(fastify: FastifyInstance) {
       transaction: txn,
       requiresApproval: reward.requiresApproval,
       rewardTitle: reward.title,
+      moneyAdded,
     }
   })
 
