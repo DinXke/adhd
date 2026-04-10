@@ -171,7 +171,7 @@ function GameEndScreen({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center px-6 text-center"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-center"
       style={{ background: 'var(--bg-primary)' }}
     >
       <ConfettiBurst active={showConfetti} />
@@ -435,7 +435,7 @@ function NumberMemory({ onBack, difficulty }: GameProps) {
   const cols = cards.length <= 12 ? 4 : cards.length <= 16 ? 4 : 5
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
       {/* Top bar */}
@@ -773,7 +773,7 @@ function BubblePopMath({ onBack, difficulty }: GameProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
       {/* Top bar */}
@@ -1038,7 +1038,7 @@ function DragEquation({ onBack, difficulty }: GameProps) {
   const displayResult = round.result !== -1 ? round.result : (showSkipAnswer ? round.answer : null)
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
       {/* Top bar */}
@@ -1464,7 +1464,7 @@ function PatternComplete({ onBack, difficulty }: GameProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
       {/* Top bar */}
@@ -1806,7 +1806,7 @@ function FractionPizza({ onBack, difficulty }: GameProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <ConfettiBurst active={showConfetti} />
 
       {/* Top bar */}
@@ -2124,7 +2124,7 @@ function SpeedTap({ onBack, difficulty }: GameProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button
@@ -2408,7 +2408,7 @@ function SplitTree({ onBack, difficulty }: GameProps) {
   const treeH = 220
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
         <button

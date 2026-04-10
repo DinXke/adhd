@@ -340,7 +340,7 @@ function GameResult({
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center px-6 text-center"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-center"
       style={{ background: 'var(--bg-primary)' }}
     >
       <motion.div
@@ -565,7 +565,7 @@ function WordScramble({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Woordpuzzel" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipWordScramble} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
@@ -883,7 +883,7 @@ function WordSearch({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title={`Woordzoeker — ${theme.label}`} score={found.length} onBack={onBack} onSkip={handleSkipWordSearch} />
 
       <div className="flex-1 overflow-auto">
@@ -1083,7 +1083,7 @@ function LetterMemory({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Letter Memory" onBack={onBack} onSkip={handleSkipLetterMemory} />
       <div className="flex-1 overflow-auto px-4 pb-24">
       <p className="text-center font-body text-ink-muted text-sm mb-3">
@@ -1284,7 +1284,7 @@ function SentenceBuilder({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Zinnen bouwen" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipSentenceBuilder} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
@@ -1528,7 +1528,7 @@ function SpellingBee({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader title="Spellingbij" round={round + 1} totalRounds={TOTAL_ROUNDS} score={score} onBack={onBack} onSkip={handleSkipSpellingBee} />
       <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
 
@@ -1588,8 +1588,8 @@ function SpellingBee({
           })}
         </motion.div>
 
-        {/* Toetsenbord — fixed onderaan */}
-        <div className="fixed bottom-0 left-0 right-0 z-30 w-full max-w-md mx-auto flex flex-col gap-1 px-2 pb-2 pt-1" style={{ background: 'var(--bg-primary)' }}>
+        {/* Toetsenbord — fixed onderaan, boven de nav */}
+        <div className="fixed bottom-0 left-0 right-0 z-[61] w-full max-w-md mx-auto flex flex-col gap-1 px-2 pb-3 pt-1" style={{ background: 'var(--bg-primary)', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
           {KEYBOARD_ROWS.map((row, ri) => (
             <div key={ri} className="flex justify-center gap-1">
               {ri === 1 && <div style={{ width: 10 }} />}
@@ -1771,7 +1771,7 @@ function CategorySort({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader
         title="Woorden sorteren"
         round={currentIdx + 1}
@@ -2085,7 +2085,7 @@ function WordCircle({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       <GameHeader
         title="Woordcirkel"
         score={foundWords.length}
