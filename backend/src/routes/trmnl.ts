@@ -402,44 +402,11 @@ custom_fields:
     hint: "Kind-ID uit GRIP, of 'all' om te alterneren tussen kinderen"
     required: false`,
 
-      'full.liquid': `<div class="layout">
-  <div class="columns"><div class="column">
-    <span class="title title--small">{{ title }}</span>
-    <div class="content"><div class="data-list" data-list-limit="true" data-list-max-height="340">
-      {% for item in activities %}<div class="item"><span class="label">{{ item.marker }} {{ item.title }}</span><span class="value">{{ item.time }}</span></div>{% endfor %}
-      {% if activities.size == 0 %}<div class="item"><span class="label">Geen schema vandaag</span></div>{% endif %}
-    </div></div>
-    <div class="tag_columns"><span class="tag">{{ token_tag }}</span><span class="tag">{{ reward_tag }}</span>{% if emotion_tag %}<span class="tag">{{ emotion_tag }}</span>{% endif %}</div>
-  </div></div>
-  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ date_display }}</span></div>
-</div>`,
+      'full.liquid': `{{ markup }}`,
 
-      'half_vertical.liquid': `<div class="layout layout--half">
-  <div class="columns"><div class="column">
-    <span class="title title--small">Tokens</span>
-    <div class="content"><div class="data-list">
-      <div class="item"><span class="label">Saldo</span><span class="value">{{ balance }} st</span></div>
-      <div class="item"><span class="label">Vandaag</span><span class="value">+{{ earned_today }}</span></div>
-      {% if next_reward_title %}<div class="item"><span class="label">{{ next_reward_title }}</span><span class="value">{{ next_reward_cost }} st</span></div>
-      <div class="item"><span class="label">{{ progress_bar }}</span></div>{% endif %}
-      {% if streak > 1 %}<div class="item"><span class="label">{{ streak }}d streak!</span></div>{% endif %}
-    </div></div>
-  </div></div>
-  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ child_name }}</span></div>
-</div>`,
+      'half_vertical.liquid': `{{ markup_half_vertical }}`,
 
-      'quadrant.liquid': `<div class="layout layout--quadrant">
-  <div class="columns"><div class="column">
-    <span class="title title--small">{{ status_label }}</span>
-    <div class="content">
-      {% if current_title %}<p style="font-size:18px;font-weight:bold;margin:8px 0">{{ current_icon }} {{ current_title }}</p>
-      <p style="font-size:13px">{{ current_time }} - {{ current_duration }} min</p>
-      {% else %}<p style="font-size:14px">Geen activiteiten meer vandaag</p>{% endif %}
-    </div>
-    <div class="tag_columns"><span class="tag">{{ balance }} st</span></div>
-  </div></div>
-  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ child_name }}</span></div>
-</div>`,
+      'quadrant.liquid': `{{ markup_quadrant }}`,
     }
 
     // Build ZIP using Node.js zlib (no archiver dependency)
