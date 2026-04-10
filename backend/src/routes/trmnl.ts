@@ -315,9 +315,14 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
 
     const data = await buildMarkup(targetChildId!)
 
-    // If Accept header wants JSON or if it's a TRMNL polling request, return JSON
-    const accept = request.headers.accept || ''
-    if (accept.includes('application/json') || request.headers['user-agent']?.includes('TRMNL')) {
+    // TRMNL detection: heeft Authorization header, of Accept: json, of TRMNL user-agent
+    const isApiRequest = !!(
+      request.headers.authorization ||
+      request.headers.accept?.includes('application/json') ||
+      request.headers['user-agent']?.includes('TRMNL') ||
+      request.headers['content-type']?.includes('application/json')
+    )
+    if (isApiRequest) {
       return data
     }
 
