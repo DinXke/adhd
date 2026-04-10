@@ -1411,7 +1411,10 @@ function SpellingBee({
     const timer = setTimeout(() => {
       if ('speechSynthesis' in window) {
         const utter = new SpeechSynthesisUtterance(current.word)
-        utter.lang = 'nl-BE'
+        const voices = speechSynthesis.getVoices()
+        const nlVoice = voices.find(v => v.lang === 'nl-BE') ?? voices.find(v => v.lang.startsWith('nl'))
+        if (nlVoice) utter.voice = nlVoice
+        utter.lang = nlVoice?.lang ?? 'nl-BE'
         utter.rate = 0.8
         speechSynthesis.speak(utter)
       }
@@ -1465,7 +1468,10 @@ function SpellingBee({
   const speakWord = () => {
     if ('speechSynthesis' in window) {
       const utter = new SpeechSynthesisUtterance(target)
-      utter.lang = 'nl-BE'
+      const voices = speechSynthesis.getVoices()
+      const nlVoice = voices.find(v => v.lang === 'nl-BE') ?? voices.find(v => v.lang.startsWith('nl'))
+      if (nlVoice) utter.voice = nlVoice
+      utter.lang = nlVoice?.lang ?? 'nl-BE'
       utter.rate = 0.8
       speechSynthesis.speak(utter)
     }

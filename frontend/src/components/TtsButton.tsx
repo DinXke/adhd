@@ -2,8 +2,30 @@
  * Gedeelde TTS (Text-to-Speech) knop voor de kind-interface.
  * Spreekt tekst uit in Vlaams Nederlands (nl-BE), met fallback naar nl-NL.
  */
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+
+// Voices cachen — worden asynchroon geladen door de browser
+let cachedVoices: SpeechSynthesisVoice[] = []
+function loadVoices() {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return
+  cachedVoices = window.speechSynthesis.getVoices()
+  if (cachedVoices.length === 0) {
+    // Voices nog niet geladen — luister naar event
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+      cachedVoices = window.speechSynthesis.getVoices()
+    }, { once: true })
+  }
+}
+loadVoices()
+
+function getDutchVoice(): SpeechSynthesisVoice | null {
+  if (cachedVoices.length === 0) cachedVoices = window.speechSynthesis?.getVoices() ?? []
+  return cachedVoices.find(v => v.lang === 'nl-BE')
+    ?? cachedVoices.find(v => v.lang === 'nl-NL')
+    ?? cachedVoices.find(v => v.lang.startsWith('nl'))
+    ?? null
+}
 
 interface TtsButtonProps {
   text: string
@@ -24,13 +46,10 @@ export function TtsButton({ text, size = 36, className = '' }: TtsButtonProps) {
       return
     }
     const utterance = new SpeechSynthesisUtterance(text)
-    // Prefer Flemish, fallback to Dutch
-    const voices = window.speechSynthesis.getVoices()
-    const flemish = voices.find(v => v.lang === 'nl-BE')
-    const dutch = voices.find(v => v.lang.startsWith('nl'))
-    if (flemish) utterance.voice = flemish
-    else if (dutch) utterance.voice = dutch
-    utterance.lang = 'nl-BE'
+    // Gebruik gecachte Nederlandse voice
+    const voice = getDutchVoice()
+    if (voice) utterance.voice = voice
+    utterance.lang = voice?.lang ?? 'nl-BE'
     utterance.rate = 0.9
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
