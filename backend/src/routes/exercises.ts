@@ -338,6 +338,22 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
     return { subjects: counts.map((c) => ({ subject: c.subject, count: c._count.id })) }
   })
 
+  // ── GET /api/exercises/availability — Beschikbare niveaus per vak
+  fastify.get('/availability', { preHandler: requireAuth }, async () => {
+    const counts = await prisma.exercise.groupBy({
+      by: ['subject', 'difficulty'],
+      where: { isApproved: true },
+      _count: { id: true },
+    })
+    // Map: { wiskunde: { 1: 5, 2: 12, ... }, taal: { ... } }
+    const availability: Record<string, Record<number, number>> = {}
+    for (const c of counts) {
+      if (!availability[c.subject]) availability[c.subject] = {}
+      availability[c.subject][c.difficulty] = c._count.id
+    }
+    return { availability }
+  })
+
   // ── GET /api/exercises/pending — Ter goedkeuring (ouder) ──────
   fastify.get('/pending', { preHandler: requireParent }, async () => {
     const exercises = await prisma.exercise.findMany({

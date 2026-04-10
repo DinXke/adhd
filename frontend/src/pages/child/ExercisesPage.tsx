@@ -661,6 +661,22 @@ export default function ExercisesPage() {
   const [result, setResult] = useState<{ correct: number; total: number; bonusTokens: number } | null>(null)
   const [sessionTokens, setSessionTokens] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [availability, setAvailability] = useState<Record<string, Record<number, number>>>({})
+
+  // Fetch availability on mount
+  useEffect(() => {
+    api.get<{ availability: Record<string, Record<number, number>> }>('/api/exercises/availability')
+      .then(res => {
+        setAvailability(res.availability)
+        // Auto-select first available difficulty for selected subject
+        const subj = res.availability[selectedSubject]
+        if (subj) {
+          const available = [1,2,3,4,5].find(d => (subj[d] ?? 0) > 0)
+          if (available) setSelectedDifficulty(available)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const startSession = async (subject: string, difficulty: number) => {
     setScreen('loading')
@@ -735,7 +751,15 @@ export default function ExercisesPage() {
               {SUBJECTS.map((s) => (
                 <button
                   key={s.key}
-                  onClick={() => setSelectedSubject(s.key)}
+                  onClick={() => {
+                    setSelectedSubject(s.key)
+                    // Auto-select first available difficulty
+                    const subj = availability[s.key]
+                    if (subj) {
+                      const avail = [1,2,3,4,5].find(d => (subj[d] ?? 0) > 0)
+                      if (avail) setSelectedDifficulty(avail)
+                    }
+                  }}
                   className="card flex items-center gap-4 px-5 py-4 w-full text-left"
                   style={{
                     borderLeft: `4px solid ${s.color}`,
@@ -756,32 +780,57 @@ export default function ExercisesPage() {
             <div className="card p-5 mb-6">
               <p className="font-body font-semibold text-ink text-base mb-4">Niveau</p>
               <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setSelectedDifficulty(d)}
-                    className="flex-1 py-3 rounded-xl font-display font-bold text-lg"
-                    style={{
-                      background: selectedDifficulty === d ? 'var(--accent-primary)' : 'var(--bg-surface)',
-                      color: selectedDifficulty === d ? 'white' : 'var(--text-muted)',
-                      border: `2px solid ${selectedDifficulty === d ? 'var(--accent-primary)' : 'transparent'}`,
-                    }}
-                  >
-                    {d}
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5].map((d) => {
+                  const count = availability[selectedSubject]?.[d] ?? 0
+                  const isEmpty = count === 0
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => !isEmpty && setSelectedDifficulty(d)}
+                      disabled={isEmpty}
+                      className="flex-1 py-3 rounded-xl font-display font-bold text-lg relative"
+                      style={{
+                        background: isEmpty
+                          ? 'var(--bg-surface)'
+                          : selectedDifficulty === d ? 'var(--accent-primary)' : 'var(--bg-surface)',
+                        color: isEmpty
+                          ? 'var(--border-color)'
+                          : selectedDifficulty === d ? 'white' : 'var(--text-muted)',
+                        border: `2px solid ${selectedDifficulty === d && !isEmpty ? 'var(--accent-primary)' : 'transparent'}`,
+                        opacity: isEmpty ? 0.4 : 1,
+                        cursor: isEmpty ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {d}
+                      {!isEmpty && count > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                          style={{
+                            background: selectedDifficulty === d ? 'white' : 'var(--accent-calm)',
+                            color: selectedDifficulty === d ? 'var(--accent-primary)' : 'white',
+                          }}>
+                          {count > 99 ? '99+' : count}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
               <p className="font-body text-ink-muted text-sm mt-2 text-center">
-                {DIFFICULTY_LABELS[selectedDifficulty]}
+                {(availability[selectedSubject]?.[selectedDifficulty] ?? 0) === 0
+                  ? 'Geen oefeningen beschikbaar'
+                  : DIFFICULTY_LABELS[selectedDifficulty]}
               </p>
             </div>
 
             <button
               onClick={() => startSession(selectedSubject, selectedDifficulty)}
-              className="w-full font-display font-bold py-4 rounded-2xl text-xl"
+              disabled={(availability[selectedSubject]?.[selectedDifficulty] ?? 0) === 0}
+              className="w-full font-display font-bold py-4 rounded-2xl text-xl disabled:opacity-40"
               style={{ background: 'var(--accent-primary)', color: 'white' }}
             >
-              Starten! 🚀
+              {(availability[selectedSubject]?.[selectedDifficulty] ?? 0) === 0
+                ? 'Geen oefeningen beschikbaar'
+                : 'Starten! 🚀'}
             </button>
           </motion.div>
         )}

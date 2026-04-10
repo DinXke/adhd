@@ -85,50 +85,90 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/trmnl/plugin.zip — Download TRMNL plugin als ZIP ─
   fastify.get('/plugin.zip', async (request, reply) => {
-    const fs = await import('fs')
-    const path = await import('path')
-    const { createGzip } = await import('zlib')
+    const appUrl = process.env.APP_URL ?? 'https://jouw-grip-url.be'
 
-    // Archiver is er niet, gebruik een simpele ZIP via raw bytes
-    // We bouwen een minimale ZIP met de 4 bestanden
-    const pluginDir = path.join(__dirname, '..', 'trmnl-plugin')
-    const files = ['settings.yml', 'full.liquid', 'half_vertical.liquid', 'quadrant.liquid']
+    // Inline file contents (no disk dependency)
+    const files: Record<string, string> = {
+      'settings.yml': `name: "GRIP - Dagplanning & Tokens"
+description: "Toont de dagplanning en token-voortgang van je kind (ADHD-app) op je TRMNL e-ink scherm."
+strategy: polling
+polling_url: "{{grip_url}}/api/trmnl/markup"
+polling_verb: POST
+polling_headers:
+  Content-Type: application/json
+polling_body: '{"user_uuid":"{{user_uuid}}"}'
+refresh_rate: 900
+custom_fields:
+  - name: grip_url
+    label: "GRIP Server URL"
+    type: text
+    placeholder: "${appUrl}"
+    hint: "Het adres van je GRIP-installatie (zonder trailing slash)"
+    required: true
+  - name: user_uuid
+    label: "TRMNL User UUID"
+    type: text
+    placeholder: "Je TRMNL user UUID (zie account-instellingen)"
+    hint: "Wordt automatisch meegegeven, laat leeg indien onzeker"
+    required: false`,
 
-    // Gebruik de ingebouwde node stream + archiver-vrije aanpak
-    // Stuur individuele bestanden als multipart? Nee, beter: genereer ZIP in-memory
+      'full.liquid': `<div class="layout">
+  <div class="columns"><div class="column">
+    <span class="title title--small">{{ title }}</span>
+    <div class="content"><div class="data-list" data-list-limit="true" data-list-max-height="340">
+      {% for item in activities %}<div class="item"><span class="label">{{ item.marker }} {{ item.title }}</span><span class="value">{{ item.time }}</span></div>{% endfor %}
+      {% if activities.size == 0 %}<div class="item"><span class="label">Geen schema vandaag</span></div>{% endif %}
+    </div></div>
+    <div class="tag_columns"><span class="tag">{{ token_tag }}</span><span class="tag">{{ reward_tag }}</span>{% if emotion_tag %}<span class="tag">{{ emotion_tag }}</span>{% endif %}</div>
+  </div></div>
+  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ date_display }}</span></div>
+</div>`,
+
+      'half_vertical.liquid': `<div class="layout layout--half">
+  <div class="columns"><div class="column">
+    <span class="title title--small">Tokens</span>
+    <div class="content"><div class="data-list">
+      <div class="item"><span class="label">Saldo</span><span class="value">{{ balance }} st</span></div>
+      <div class="item"><span class="label">Vandaag</span><span class="value">+{{ earned_today }}</span></div>
+      {% if next_reward_title %}<div class="item"><span class="label">{{ next_reward_title }}</span><span class="value">{{ next_reward_cost }} st</span></div>
+      <div class="item"><span class="label">{{ progress_bar }}</span></div>{% endif %}
+      {% if streak > 1 %}<div class="item"><span class="label">{{ streak }}d streak!</span></div>{% endif %}
+    </div></div>
+  </div></div>
+  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ child_name }}</span></div>
+</div>`,
+
+      'quadrant.liquid': `<div class="layout layout--quadrant">
+  <div class="columns"><div class="column">
+    <span class="title title--small">{{ status_label }}</span>
+    <div class="content">
+      {% if current_title %}<p style="font-size:18px;font-weight:bold;margin:8px 0">{{ current_icon }} {{ current_title }}</p>
+      <p style="font-size:13px">{{ current_time }} - {{ current_duration }} min</p>
+      {% else %}<p style="font-size:14px">Geen activiteiten meer vandaag</p>{% endif %}
+    </div>
+    <div class="tag_columns"><span class="tag">{{ balance }} st</span></div>
+  </div></div>
+  <div class="title_bar"><span class="title">GRIP</span><span class="instance">{{ child_name }}</span></div>
+</div>`,
+    }
+
     try {
       const archiver = await import('archiver')
       const archive = archiver.default('zip', { zlib: { level: 9 } })
       reply.header('Content-Type', 'application/zip')
       reply.header('Content-Disposition', 'attachment; filename="grip-trmnl-plugin.zip"')
 
-      for (const file of files) {
-        const filePath = path.join(pluginDir, file)
-        if (fs.existsSync(filePath)) {
-          let content = fs.readFileSync(filePath, 'utf-8')
-          // Inject APP_URL in settings.yml default
-          if (file === 'settings.yml') {
-            const appUrl = process.env.APP_URL ?? 'https://jouw-grip-url.be'
-            content = content.replace('https://julie.scheepers.one', appUrl)
-          }
-          archive.append(content, { name: file })
-        }
+      for (const [name, content] of Object.entries(files)) {
+        archive.append(content, { name })
       }
 
       archive.finalize()
       return reply.send(archive)
-    } catch {
-      // Fallback: serve settings.yml als JSON config
-      const appUrl = process.env.APP_URL ?? 'https://jouw-grip-url.be'
+    } catch (err) {
+      // Fallback: serve als JSON
       reply.header('Content-Type', 'application/json')
       reply.header('Content-Disposition', 'attachment; filename="grip-trmnl-plugin.json"')
-      return {
-        name: 'GRIP — Dagplanning & Tokens',
-        description: 'Installeer als TRMNL private plugin.',
-        polling_url: `${appUrl}/api/trmnl/markup`,
-        refresh_rate: 900,
-        note: 'ZIP-generatie niet beschikbaar — installeer de plugin bestanden handmatig vanuit de /backend/src/trmnl-plugin/ map.',
-      }
+      return { error: 'ZIP generatie mislukt', files: Object.keys(files), note: 'Installeer archiver: npm install archiver' }
     }
   })
 
