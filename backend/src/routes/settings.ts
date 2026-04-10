@@ -7,15 +7,16 @@ const SETTINGS_KEY = 'grip:settings'
 interface AppSettings {
   extraAllowedOrigins: string[]  // extra CORS-origins bovenop CORS_ORIGINS in .env
   appName: string
+  timezone: string  // IANA timezone, default Europe/Brussels
 }
 
 async function loadSettings(): Promise<AppSettings> {
   const raw = await redis.get(SETTINGS_KEY)
-  if (!raw) return { extraAllowedOrigins: [], appName: 'GRIP' }
+  if (!raw) return { extraAllowedOrigins: [], appName: 'GRIP', timezone: 'Europe/Brussels' }
   try {
     return JSON.parse(raw)
   } catch {
-    return { extraAllowedOrigins: [], appName: 'GRIP' }
+    return { extraAllowedOrigins: [], appName: 'GRIP', timezone: 'Europe/Brussels' }
   }
 }
 
@@ -54,6 +55,12 @@ export async function tokenSettingsRoutes(fastify: FastifyInstance) {
         ? body.extraAllowedOrigins.map((o: string) => o.trim()).filter(Boolean)
         : current.extraAllowedOrigins,
       appName: body.appName ?? current.appName,
+      timezone: body.timezone ?? current.timezone,
+    }
+
+    // Pas tijdzone toe op het proces
+    if (updated.timezone) {
+      process.env.TZ = updated.timezone
     }
 
     await saveSettings(updated)

@@ -261,6 +261,56 @@ function TrmnlPanel() {
   )
 }
 
+// ── Tijdzone instelling ─────────────────────────────────────
+function TimezonePanel() {
+  const [tz, setTz] = useState('Europe/Brussels')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    api.get<{ settings: { timezone?: string } }>('/api/admin/settings')
+      .then(r => { if (r.settings.timezone) setTz(r.settings.timezone) })
+      .catch(() => {})
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await api.put('/api/admin/settings', { timezone: tz })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {}
+    setSaving(false)
+  }
+
+  const timezones = [
+    'Europe/Brussels', 'Europe/Amsterdam', 'Europe/Paris', 'Europe/Berlin',
+    'Europe/London', 'Europe/Zurich', 'Europe/Vienna', 'Europe/Rome',
+    'Europe/Madrid', 'Europe/Lisbon', 'Europe/Stockholm', 'Europe/Warsaw',
+    'America/New_York', 'America/Chicago', 'America/Los_Angeles',
+    'Asia/Tokyo', 'Australia/Sydney',
+  ]
+
+  return (
+    <div className="card p-5">
+      <h2 className="font-semibold text-ink mb-1">Tijdzone</h2>
+      <p className="text-sm text-ink-muted mb-3">
+        Bepaalt wanneer activiteiten als "nu" of "afgerond" getoond worden.
+      </p>
+      <div className="flex gap-2">
+        <select value={tz} onChange={e => setTz(e.target.value)}
+          className="flex-1 px-3 py-2 rounded-xl border border-border bg-card text-sm text-ink focus:border-accent focus:outline-none">
+          {timezones.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button onClick={save} disabled={saving}
+          className="px-4 py-2 rounded-xl bg-accent text-white text-sm font-medium disabled:opacity-50">
+          {saved ? '✓' : saving ? '...' : 'Opslaan'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function SystemPage() {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null)
   const [updateCheck, setUpdateCheck] = useState<UpdateCheck | null>(null)
@@ -358,6 +408,9 @@ export function SystemPage() {
         <h1 className="text-2xl font-bold text-ink">Systeembeheer</h1>
         <p className="text-sm text-ink-muted mt-0.5">Updates, backups en versie-informatie</p>
       </div>
+
+      {/* Tijdzone */}
+      <TimezonePanel />
 
       {/* Versie & uptime */}
       <div className="card p-5">

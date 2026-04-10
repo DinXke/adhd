@@ -85,19 +85,19 @@ function renderBlock(type: BlockType, data: BlockData): string {
       }).join('')
       return `<span class="title title--small">Dagplanning</span><div class="data-list">${rows || '<div class="item"><span class="label">Geen schema vandaag</span></div>'}</div>`
     }
-    case 'token_saldo':
-      return `<span class="title title--small">Token saldo</span><div class="data-list"><div class="item"><span class="label">Saldo</span><span class="value">${data.balance} st</span></div><div class="item"><span class="label">Vandaag</span><span class="value">+${data.earnedToday}</span></div></div>`
+    case 'token_saldo': {
+      // Balk met sterretjes: ★ voor huidige stand, ☆ voor komende doelen
+      const saldoBar = buildStarBar(data.balance, data.allRewards)
+      return `<span class="title title--small">Tokens: ${data.balance}</span>${saldoBar}<div class="data-list"><div class="item"><span class="label">Vandaag verdiend</span><span class="value">+${data.earnedToday}</span></div>${data.streakDays > 1 ? `<div class="item"><span class="label">Streak</span><span class="value">${data.streakDays} dagen</span></div>` : ''}</div>`
+    }
     case 'token_voortgang': {
       if (data.allRewards.length === 0) return `<span class="title title--small">Voortgang</span><div class="data-list"><div class="item"><span class="label">${data.balance} tokens — geen doelen</span></div></div>`
-      const maxCost = data.allRewards[data.allRewards.length - 1].costTokens
-      const barWidth = 24
-      const filled = Math.min(Math.round((data.balance / maxCost) * barWidth), barWidth)
-      const bar = '█'.repeat(filled) + '░'.repeat(barWidth - filled)
+      const starBar = buildStarBar(data.balance, data.allRewards)
       const goals = data.allRewards.map(r => {
         const reached = data.balance >= r.costTokens
-        return `<div class="item"><span class="label">${reached ? '◆' : '◇'} ${r.title}</span><span class="value">${r.costTokens} st</span></div>`
+        return `<div class="item"><span class="label">${reached ? '★' : '☆'} ${r.title}</span><span class="value">${r.costTokens} st</span></div>`
       }).join('')
-      return `<span class="title title--small">Voortgang</span><div style="margin:6px 0;font-family:monospace;font-size:11px;letter-spacing:1px">${bar}</div><div class="data-list">${goals}</div>`
+      return `<span class="title title--small">Voortgang</span>${starBar}<div class="data-list">${goals}</div>`
     }
     case 'huidige_activiteit': {
       const act = data.currentActivity
@@ -551,6 +551,31 @@ function crc32(buf: Buffer): number {
     }
   }
   return (crc ^ 0xFFFFFFFF) >>> 0
+}
+
+/** Build a star progress bar: ★ for reached, ☆ for upcoming goals, █░ for fill */
+function buildStarBar(balance: number, rewards: { title: string; costTokens: number }[]): string {
+  if (rewards.length === 0) return `<div style="margin:4px 0;font-family:monospace;font-size:12px">★ ${balance} tokens</div>`
+  const maxCost = Math.max(rewards[rewards.length - 1].costTokens, balance + 1)
+  const barWidth = 30
+  let bar = ''
+  for (let i = 0; i < barWidth; i++) {
+    const posValue = Math.round(((i + 1) / barWidth) * maxCost)
+    // Check if a reward goal falls at this position
+    const milestone = rewards.find(r => {
+      const goalPos = Math.round((r.costTokens / maxCost) * barWidth)
+      return goalPos === i + 1
+    })
+    if (milestone) {
+      bar += balance >= milestone.costTokens ? '★' : '☆'
+    } else {
+      const fillPos = Math.round((balance / maxCost) * barWidth)
+      bar += i < fillPos ? '█' : '░'
+    }
+  }
+  const nextGoal = rewards.find(r => r.costTokens > balance)
+  const label = nextGoal ? ` ${balance}/${nextGoal.costTokens} → ${nextGoal.title}` : ` ${balance} ★`
+  return `<div style="margin:6px 0;font-family:monospace;font-size:11px;letter-spacing:0.5px">${bar}</div><div style="font-size:10px;color:#666">${label}</div>`
 }
 
 function extractBearerToken(header?: string): string | null {

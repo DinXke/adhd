@@ -17,16 +17,15 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
       childId?: string
     }
 
-    // Recente oefeningen voor dit kind ophalen (voor adaptieve selectie)
-    let recentExerciseIds: string[] = []
+    // Correct beantwoorde oefeningen uitsluiten voor dit kind
+    let solvedExerciseIds: string[] = []
     if (childId) {
-      const recent = await prisma.exerciseSessionItem.findMany({
-        where: { session: { childId } },
+      const solved = await prisma.exerciseSessionItem.findMany({
+        where: { session: { childId }, isCorrect: true },
         select: { exerciseId: true },
-        orderBy: { answeredAt: 'desc' },
-        take: 50,
+        distinct: ['exerciseId'],
       })
-      recentExerciseIds = recent.map((r) => r.exerciseId)
+      solvedExerciseIds = solved.map((r) => r.exerciseId)
     }
 
     const exercises = await prisma.exercise.findMany({
@@ -34,12 +33,32 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
         isApproved: true,
         ...(subject ? { subject: subject as Subject } : {}),
         ...(difficulty ? { difficulty: parseInt(difficulty) } : {}),
-        // Vermijd heel recent gemaakte oefeningen (lichte variatie)
-        ...(recentExerciseIds.length > 20 ? { id: { notIn: recentExerciseIds.slice(0, 20) } } : {}),
+        // Exclude correct beantwoorde oefeningen
+        ...(solvedExerciseIds.length > 0 ? { id: { notIn: solvedExerciseIds } } : {}),
       },
       orderBy: [{ difficulty: 'asc' }, { createdAt: 'asc' }],
       take: parseInt(limit),
     })
+
+    // Als er niet genoeg onopgeloste zijn, val terug op alle (inclusief opgeloste)
+    if (exercises.length < parseInt(limit) / 2) {
+      const allExercises = await prisma.exercise.findMany({
+        where: {
+          isApproved: true,
+          ...(subject ? { subject: subject as Subject } : {}),
+          ...(difficulty ? { difficulty: parseInt(difficulty) } : {}),
+        },
+        orderBy: [{ difficulty: 'asc' }, { createdAt: 'asc' }],
+        take: parseInt(limit),
+      })
+      // Merge: onopgeloste eerst, dan opgeloste als aanvulling
+      const ids = new Set(exercises.map(e => e.id))
+      for (const ex of allExercises) {
+        if (!ids.has(ex.id) && exercises.length < parseInt(limit)) {
+          exercises.push(ex)
+        }
+      }
+    }
 
     return { exercises }
   })
