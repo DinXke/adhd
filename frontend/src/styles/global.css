@@ -17,7 +17,8 @@
 }
 
 html {
-  font-size: var(--font-size-body, 16px);
+  /* Dynamische font-size schaalt met viewport — min 14px, max 20px */
+  font-size: clamp(14px, calc(12px + 0.5vw + 0.3vh), var(--font-size-body, 20px));
   line-height: var(--line-height, 1.5);
   letter-spacing: var(--letter-spacing, 0);
   -webkit-tap-highlight-color: transparent;
@@ -249,6 +250,54 @@ html.high-contrast [data-theme="adult"] {
   --text-primary: #000000;
   --text-secondary: #333333;
   --border: #888888;
+}
+
+/* ── Responsive viewport schaling ─────────────────────────────── */
+
+/* Kleine schermen (telefoon portrait): compactere UI */
+@media (max-height: 700px) {
+  [data-theme="child"] {
+    --font-size-body: 16px;
+    --font-size-heading: 24px;
+    --btn-min-height: 44px;
+  }
+}
+
+@media (max-height: 550px) {
+  [data-theme="child"] {
+    --font-size-body: 14px;
+    --font-size-heading: 20px;
+    --btn-min-height: 40px;
+    --radius-soft: 14px;
+  }
+}
+
+/* Landscape modus: compacter */
+@media (orientation: landscape) and (max-height: 500px) {
+  [data-theme="child"] {
+    --font-size-body: 13px;
+    --font-size-heading: 18px;
+    --btn-min-height: 36px;
+  }
+  .bottom-nav { padding-bottom: 0 !important; }
+}
+
+/* Game containers: altijd viewport-fit */
+.game-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.game-viewport > .game-content {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: min(16px, 2vh) min(16px, 3vw);
 }
 
 /* ── PDF / Print ─────────────────────────────────────────────── */

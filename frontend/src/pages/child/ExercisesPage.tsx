@@ -475,7 +475,7 @@ function ExerciseSession({
   }
 
   return (
-    <div className="flex flex-col px-5 pt-4 pb-24">
+    <div className="flex flex-col px-4 pt-2 pb-20 max-h-[100dvh] overflow-auto">
       {/* Header: voortgang + timer */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-1.5">

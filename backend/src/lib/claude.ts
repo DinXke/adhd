@@ -3,6 +3,69 @@
  * Graceful fallback als CLAUDE_API_KEY niet ingesteld is.
  */
 import Anthropic from '@anthropic-ai/sdk'
+import { redis } from './redis'
+
+// ── API gebruik bijhouden ────────────────────────────────────
+
+interface ApiUsageEntry {
+  type: string        // 'exercise_generation', 'hint', 'tip', 'social_script', 'report'
+  model: string
+  inputTokens: number
+  outputTokens: number
+  estimatedCostEur: number
+  timestamp: string
+}
+
+// Kosten per 1M tokens (Haiku 3.5, prijzen apr 2026)
+const COST_PER_1M_INPUT = 0.25   // EUR
+const COST_PER_1M_OUTPUT = 1.25  // EUR
+
+async function trackUsage(type: string, model: string, inputTokens: number, outputTokens: number) {
+  const cost = (inputTokens / 1_000_000) * COST_PER_1M_INPUT + (outputTokens / 1_000_000) * COST_PER_1M_OUTPUT
+  const entry: ApiUsageEntry = {
+    type, model, inputTokens, outputTokens,
+    estimatedCostEur: Math.round(cost * 100000) / 100000,
+    timestamp: new Date().toISOString(),
+  }
+  try {
+    // Sla op in een Redis list (laatste 1000 entries)
+    await redis.lpush('claude-api-usage', JSON.stringify(entry))
+    await redis.ltrim('claude-api-usage', 0, 999)
+    // Incrementeer dagelijkse/maandelijkse tellers
+    const day = new Date().toISOString().slice(0, 10)
+    const month = day.slice(0, 7)
+    const year = day.slice(0, 4)
+    await redis.incrbyfloat(`claude-cost:day:${day}`, cost)
+    await redis.incrbyfloat(`claude-cost:month:${month}`, cost)
+    await redis.incrbyfloat(`claude-cost:year:${year}`, cost)
+    await redis.incrbyfloat('claude-cost:total', cost)
+    // Tokens tellen
+    await redis.incrby(`claude-tokens:day:${day}`, inputTokens + outputTokens)
+    await redis.incrby(`claude-tokens:month:${month}`, inputTokens + outputTokens)
+  } catch {}
+}
+
+/** Haal API kosten op per periode */
+export async function getApiUsageStats() {
+  const now = new Date()
+  const day = now.toISOString().slice(0, 10)
+  const month = day.slice(0, 7)
+  const year = day.slice(0, 4)
+  const [dayC, monthC, yearC, totalC, dayT, monthT] = await Promise.all([
+    redis.get(`claude-cost:day:${day}`),
+    redis.get(`claude-cost:month:${month}`),
+    redis.get(`claude-cost:year:${year}`),
+    redis.get('claude-cost:total'),
+    redis.get(`claude-tokens:day:${day}`),
+    redis.get(`claude-tokens:month:${month}`),
+  ])
+  return {
+    today: { cost: parseFloat(dayC ?? '0'), tokens: parseInt(dayT ?? '0') },
+    thisMonth: { cost: parseFloat(monthC ?? '0'), tokens: parseInt(monthT ?? '0') },
+    thisYear: { cost: parseFloat(yearC ?? '0') },
+    allTime: { cost: parseFloat(totalC ?? '0') },
+  }
+}
 
 let _client: Anthropic | null = null
 
@@ -103,6 +166,9 @@ Geef ALLEEN geldig JSON terug (array), geen andere tekst:
     messages: [{ role: 'user', content: prompt }],
   })
 
+  // Track usage
+  trackUsage('exercise_generation', 'claude-haiku-4-5', msg.usage?.input_tokens ?? 0, msg.usage?.output_tokens ?? 0)
+
   const text = msg.content[0].type === 'text' ? msg.content[0].text : ''
 
   // JSON extraheren (soms staat er extra tekst omheen)
@@ -142,5 +208,6 @@ Geef ALLEEN de hint-tekst terug, geen andere uitleg.`,
     ],
   })
 
+  trackUsage('hint', 'claude-haiku-4-5', msg.usage?.input_tokens ?? 0, msg.usage?.output_tokens ?? 0)
   return msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
 }

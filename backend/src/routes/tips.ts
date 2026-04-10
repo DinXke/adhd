@@ -6,6 +6,7 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma'
 import { requireAuth } from '../middleware/auth'
 import Anthropic from '@anthropic-ai/sdk'
+import { getApiUsageStats } from '../lib/claude'
 
 function getClient() {
   return new Anthropic({ apiKey: process.env.CLAUDE_API_KEY })

@@ -1,5 +1,5 @@
 /**
- * Taalspelletjes — 6 interactieve spelletjes voor taal en spelling.
+ * Taalspelletjes — 7 interactieve spelletjes voor taal en spelling.
  *
  * Spelletjes:
  * 1. WordScramble  — Woordpuzzel (letters in juiste volgorde)
@@ -8,6 +8,7 @@
  * 4. SentenceBuilder — Zinnen bouwen uit losse woorden
  * 5. SpellingBee   — Woorden spellen bij een afbeelding
  * 6. CategorySort  — Woorden sorteren in categorieen
+ * 7. WordCircle    — Woordcirkel (letters verbinden tot woorden)
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -1775,6 +1776,357 @@ function CategorySort({
   )
 }
 
+// ── 7. WordCircle — Woordcirkel ─────────────────────────────
+
+// Voorgedefinieerde lettersets met geldige Nederlandse woorden
+const WORD_CIRCLE_SETS: { letters: string[]; words: string[] }[] = [
+  // ── Makkelijk (5 letters, 3-4 woorden van 3-4 letters) ──
+  { letters: ['K', 'A', 'T', 'S', 'E'], words: ['KAT', 'TAS', 'SAT', 'SET'] },
+  { letters: ['B', 'O', 'S', 'T', 'E'], words: ['BOS', 'BOT', 'BET', 'SOB'] },
+  { letters: ['H', 'A', 'N', 'D', 'E'], words: ['HAN', 'DEN', 'HEN', 'HAND'] },
+  { letters: ['R', 'A', 'M', 'P', 'E'], words: ['RAM', 'MAP', 'RAMP', 'ARM'] },
+  { letters: ['L', 'A', 'M', 'P', 'E'], words: ['LAM', 'PAL', 'AMP', 'LAMP'] },
+  { letters: ['P', 'O', 'T', 'E', 'N'], words: ['POT', 'PEN', 'TEN', 'NET'] },
+  { letters: ['B', 'E', 'D', 'R', 'A'], words: ['BED', 'BAD', 'BAR', 'RED'] },
+  { letters: ['V', 'I', 'S', 'T', 'E'], words: ['VIS', 'SET', 'VET', 'VEST'] },
+  { letters: ['K', 'O', 'E', 'L', 'S'], words: ['KOEL', 'SOL', 'OEL', 'SOEL'] },
+  { letters: ['R', 'O', 'E', 'K', 'S'], words: ['ROEK', 'ROK', 'OER', 'KOER'] },
+  { letters: ['D', 'A', 'K', 'E', 'N'], words: ['DAK', 'DEN', 'KAN', 'DAKEN'] },
+  { letters: ['Z', 'E', 'E', 'R', 'S'], words: ['ZEE', 'ZEER', 'REE', 'REES'] },
+  { letters: ['M', 'O', 'E', 'S', 'T'], words: ['MOET', 'MOST', 'STEM', 'TOES'] },
+  { letters: ['B', 'A', 'L', 'K', 'E'], words: ['BAL', 'BAK', 'LAK', 'BALK'] },
+  { letters: ['M', 'A', 'N', 'D', 'E'], words: ['MAN', 'MAND', 'DEN', 'MADE'] },
+  // ── Gemiddeld (6 letters, 4-5 woorden) ──
+  { letters: ['K', 'A', 'S', 'T', 'E', 'R'], words: ['KAT', 'TAS', 'STER', 'REST', 'RAST'] },
+  { letters: ['B', 'L', 'O', 'E', 'M', 'S'], words: ['BLOEM', 'BOEL', 'BLOM', 'MOES', 'LOEB'] },
+  { letters: ['S', 'T', 'O', 'E', 'L', 'P'], words: ['STOEL', 'STEP', 'POEL', 'SLOT', 'STEL'] },
+  { letters: ['W', 'A', 'T', 'E', 'R', 'S'], words: ['WATER', 'WRAT', 'STER', 'REST', 'WAST'] },
+  { letters: ['P', 'L', 'A', 'N', 'T', 'E'], words: ['PLANT', 'PLAT', 'PANT', 'PLAN', 'PLATEN'] },
+  { letters: ['K', 'R', 'A', 'N', 'T', 'E'], words: ['KRANT', 'RANK', 'TANK', 'RENT', 'TREKN'] },
+  { letters: ['B', 'R', 'O', 'E', 'K', 'S'], words: ['BROEK', 'BOER', 'BROK', 'KOER', 'ROBS'] },
+  { letters: ['S', 'P', 'E', 'L', 'E', 'N'], words: ['SPEEL', 'PEEL', 'SPEL', 'LEEP', 'PENS'] },
+  { letters: ['V', 'L', 'I', 'E', 'G', 'T'], words: ['VLIEG', 'GEIT', 'TGEL', 'VEIL', 'GILT'] },
+  { letters: ['D', 'R', 'O', 'O', 'M', 'S'], words: ['DROOM', 'DORS', 'MOOR', 'DOOM', 'ROOD'] },
+  // ── Moeilijk (7 letters, 5-6 woorden) ──
+  { letters: ['S', 'C', 'H', 'O', 'O', 'L', 'T'], words: ['SCHOOL', 'STOOL', 'SCHOT', 'LOOT', 'SLOT', 'HOLS'] },
+  { letters: ['V', 'R', 'I', 'E', 'N', 'D', 'S'], words: ['VRIEND', 'DRIES', 'RINS', 'DINS', 'VRIES', 'NERD'] },
+  { letters: ['W', 'I', 'N', 'T', 'E', 'R', 'S'], words: ['WINTER', 'WRIST', 'TWINE', 'STERN', 'TRIEN', 'WENS'] },
+  { letters: ['B', 'L', 'A', 'D', 'E', 'R', 'S'], words: ['BLADER', 'BLADE', 'SABEL', 'DALER', 'BLAAS', 'REEDS'] },
+  { letters: ['K', 'L', 'E', 'U', 'R', 'E', 'N'], words: ['KLEUR', 'KNEEL', 'LUREN', 'REKEL', 'KNUL', 'LEUK'] },
+]
+
+function getWordCircleSets(difficulty: number): { letters: string[]; words: string[] }[] {
+  if (difficulty === 1) return WORD_CIRCLE_SETS.slice(0, 15)
+  if (difficulty === 2) return WORD_CIRCLE_SETS.slice(15, 25)
+  return WORD_CIRCLE_SETS.slice(25)
+}
+
+function WordCircle({
+  onBack,
+  difficulty,
+}: {
+  onBack: () => void
+  difficulty: number
+}) {
+  const { user } = useAuthStore()
+  const [gameKey, setGameKey] = useState(0)
+
+  const puzzleSets = useMemo(() => getWordCircleSets(difficulty), [difficulty])
+  const puzzle = useMemo(() => {
+    const set = puzzleSets[Math.floor(Math.random() * puzzleSets.length)]
+    return { letters: shuffle(set.letters), words: set.words.map((w) => w.toUpperCase()) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzleSets, gameKey])
+
+  const [foundWords, setFoundWords] = useState<string[]>([])
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([])
+  const [isDragging, setIsDragging] = useState(false)
+  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
+  const [done, setDone] = useState(false)
+  const [tokensEarned, setTokensEarned] = useState(0)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const letterRefs = useRef<(SVGCircleElement | null)[]>([])
+
+  const cx = 150
+  const cy = 150
+  const radius = 105
+  const letterRadius = 30
+
+  const totalWords = puzzle.words.length
+  const currentWord = selectedIndices.map((i) => puzzle.letters[i]).join('')
+
+  // Bereken posities van letters in een cirkel
+  const letterPositions = useMemo(() => {
+    return puzzle.letters.map((_, i) => {
+      const angle = (2 * Math.PI * i) / puzzle.letters.length - Math.PI / 2
+      return {
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle),
+      }
+    })
+  }, [puzzle.letters.length])
+
+  // Vind de dichtste letter bij een punt
+  const findLetterAtPoint = useCallback(
+    (clientX: number, clientY: number): number | null => {
+      if (!svgRef.current) return null
+      const rect = svgRef.current.getBoundingClientRect()
+      const scaleX = 300 / rect.width
+      const scaleY = 300 / rect.height
+      const svgX = (clientX - rect.left) * scaleX
+      const svgY = (clientY - rect.top) * scaleY
+
+      for (let i = 0; i < letterPositions.length; i++) {
+        const dx = svgX - letterPositions[i].x
+        const dy = svgY - letterPositions[i].y
+        if (Math.sqrt(dx * dx + dy * dy) < letterRadius + 8) {
+          return i
+        }
+      }
+      return null
+    },
+    [letterPositions],
+  )
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (done || feedback) return
+      const idx = findLetterAtPoint(e.clientX, e.clientY)
+      if (idx !== null) {
+        soundTap()
+        setIsDragging(true)
+        setSelectedIndices([idx])
+        ;(e.target as Element)?.setPointerCapture?.(e.pointerId)
+      }
+    },
+    [done, feedback, findLetterAtPoint],
+  )
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging || done || feedback) return
+      const idx = findLetterAtPoint(e.clientX, e.clientY)
+      if (idx !== null && !selectedIndices.includes(idx)) {
+        soundTap()
+        setSelectedIndices((prev) => [...prev, idx])
+      }
+    },
+    [isDragging, done, feedback, findLetterAtPoint, selectedIndices],
+  )
+
+  const handlePointerUp = useCallback(() => {
+    if (!isDragging) return
+    setIsDragging(false)
+
+    const word = selectedIndices.map((i) => puzzle.letters[i]).join('')
+    if (word.length >= 3 && puzzle.words.includes(word) && !foundWords.includes(word)) {
+      soundMatch()
+      feedbackCorrect()
+      setFeedback('correct')
+      setShowSuccess(true)
+      if (navigator.vibrate) navigator.vibrate(30)
+      const newFound = [...foundWords, word]
+      setFoundWords(newFound)
+
+      setTimeout(() => {
+        setFeedback(null)
+        setSelectedIndices([])
+        setShowSuccess(false)
+        if (newFound.length >= totalWords) {
+          finishGame(newFound.length)
+        }
+      }, 700)
+    } else {
+      if (word.length >= 2) {
+        feedbackWrong()
+        setFeedback('wrong')
+        setTimeout(() => {
+          setFeedback(null)
+          setSelectedIndices([])
+        }, 500)
+      } else {
+        setSelectedIndices([])
+      }
+    }
+  }, [isDragging, selectedIndices, puzzle, foundWords, totalWords])
+
+  const finishGame = async (finalScore: number) => {
+    const tokens = Math.max(1, Math.round((finalScore / totalWords) * 3))
+    setTokensEarned(tokens)
+    if (user?.id) await awardTokens(user.id, tokens, `Woordcirkel: ${finalScore}/${totalWords}`)
+    setDone(true)
+  }
+
+  if (done) {
+    return (
+      <GameResult
+        score={foundWords.length}
+        maxScore={totalWords}
+        onReplay={() => {
+          setFoundWords([])
+          setSelectedIndices([])
+          setDone(false)
+          setTokensEarned(0)
+          setGameKey((k) => k + 1)
+        }}
+        onBack={onBack}
+        tokensEarned={tokensEarned}
+      />
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+      <GameHeader
+        title="Woordcirkel"
+        score={foundWords.length}
+        onBack={onBack}
+      />
+      <AnimatePresence>{showSuccess && <SuccessOverlay />}</AnimatePresence>
+
+      <div className="flex-1 overflow-auto flex flex-col items-center px-4 pb-8 gap-3 pt-2">
+        {/* Huidig woord dat gevormd wordt */}
+        <div
+          className="w-full rounded-2xl py-3 text-center font-display font-bold"
+          style={{
+            fontSize: 'clamp(24px, 7vw, 36px)',
+            background: 'var(--bg-card)',
+            border: `2px solid ${
+              feedback === 'correct'
+                ? 'var(--accent-success)'
+                : feedback === 'wrong'
+                ? 'var(--hint-color)'
+                : 'var(--border-color)'
+            }`,
+            color: feedback === 'correct' ? 'var(--accent-success)' : 'var(--text-primary)',
+            minHeight: 56,
+            transition: 'border-color 0.2s, color 0.2s',
+          }}
+        >
+          {currentWord || '\u00A0'}
+        </div>
+
+        {/* SVG cirkel met letters */}
+        <svg
+          ref={svgRef}
+          viewBox="0 0 300 300"
+          className="w-full max-w-xs touch-none select-none"
+          style={{ maxHeight: '40vh' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          {/* Verbindingslijnen */}
+          {selectedIndices.length > 1 &&
+            selectedIndices.slice(1).map((idx, i) => {
+              const from = letterPositions[selectedIndices[i]]
+              const to = letterPositions[idx]
+              return (
+                <line
+                  key={`line-${i}`}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke={feedback === 'correct' ? '#5B8C5A' : feedback === 'wrong' ? '#A8C5D6' : '#E8734A'}
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                  opacity={0.7}
+                />
+              )
+            })}
+
+          {/* Letter-cirkels */}
+          {puzzle.letters.map((letter, i) => {
+            const pos = letterPositions[i]
+            const isSelected = selectedIndices.includes(i)
+            return (
+              <g key={`letter-${i}`}>
+                <circle
+                  ref={(el) => { letterRefs.current[i] = el }}
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={letterRadius}
+                  fill={
+                    isSelected
+                      ? feedback === 'correct'
+                        ? '#5B8C5A'
+                        : feedback === 'wrong'
+                        ? '#A8C5D6'
+                        : '#E8734A'
+                      : '#FFF9F0'
+                  }
+                  stroke={isSelected ? 'transparent' : '#E8E0D6'}
+                  strokeWidth={2.5}
+                />
+                <text
+                  x={pos.x}
+                  y={pos.y + 1}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={isSelected ? 'white' : '#3D3229'}
+                  fontSize={22}
+                  fontWeight={700}
+                  fontFamily="var(--font-display)"
+                  style={{ pointerEvents: 'none', userSelect: 'none' }}
+                >
+                  {letter}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+
+        {/* Gevonden woorden */}
+        <div className="w-full">
+          <p className="font-body font-semibold text-sm mb-2" style={{ color: 'var(--text-muted)' }}>
+            Gevonden: {foundWords.length} / {totalWords}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {puzzle.words.map((word, i) => {
+              const found = foundWords.includes(word)
+              return (
+                <motion.span
+                  key={word}
+                  initial={found ? { scale: 0.5 } : {}}
+                  animate={found ? { scale: 1 } : {}}
+                  className="font-display font-bold px-3 py-1.5 rounded-full text-sm"
+                  style={{
+                    background: found ? 'var(--accent-success)' : 'var(--bg-surface)',
+                    color: found ? 'white' : 'var(--text-muted)',
+                    border: `1.5px solid ${found ? 'var(--accent-success)' : 'var(--border-color)'}`,
+                    minHeight: 36,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {found ? word : word.split('').map(() => '_').join(' ')}
+                </motion.span>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Hint */}
+        <AnimatePresence>
+          {feedback === 'wrong' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center font-body text-sm rounded-2xl px-4 py-2"
+              style={{ background: 'rgba(168,197,214,0.2)', color: 'var(--text-primary)' }}
+            >
+              Dat is geen woord. Probeer een ander pad!
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
 // ── Spelletjes-overzicht ─────────────────────────────────────
 
 interface GameDef {
@@ -1834,6 +2186,14 @@ const GAMES: GameDef[] = [
     description: 'Sleep elk woord naar de juiste groep',
     color: '#E8734A',
     component: CategorySort,
+  },
+  {
+    id: 'word-circle',
+    emoji: '🔵',
+    name: 'Woordcirkel',
+    description: 'Verbind letters in de cirkel tot woorden',
+    color: '#7BAFA3',
+    component: WordCircle,
   },
 ]
 

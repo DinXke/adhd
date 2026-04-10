@@ -64,3 +64,28 @@ Alle noemenswaardige wijzigingen aan GRIP worden hier gedocumenteerd.
 - Multi-kind ondersteuning
 - Home Assistant webhooks
 - Docker Compose deployment
+
+## [v1.5.0] — 2026-04-10
+
+### Nieuw
+- **12 Educatieve spelletjes** — 6 wiskunde + 6 taal, met drag & drop, animaties, geluiden
+  - Wiskunde: Memory, Bubbels knallen, Sleep de som, Patronen, Pizza breuken, Rekenrace, Splitsboom
+  - Taal: Woordpuzzel, Woordzoeker, Letter Memory, Zinnen bouwen, Spellingbij, Woorden sorteren, Woordcirkel
+- **Geluidseffecten** — 16 Web Audio API sounds (correct, fout, win, flip, pop, streak, etc.) + mute knop
+- **Thema-systeem** — 4 kind-thema's (Warme Speeltuin, Oceaan, Jungle, Ruimte) + 2 ouder-thema's (Licht, Donker)
+- **Claude API kosten dashboard** — Realtime tracking per dag/maand/jaar in Systeembeheer
+- **PWA landscape modus** — Draait mee met het apparaat
+- **Dynamische viewport schaling** — Fonts en knoppen passen zich aan op elk schermformaat
+
+### Verbeterd
+- AZERTY (Belgisch) toetsenbord bij spellingbij
+- Tekst contrast gefixt — geen witte tekst meer op lichte achtergronden
+- Spelletjes passen op 1 scherm (fixed inset-0 viewport)
+- Oefeningen sessie compacter (geen scroll nodig)
+- "Nog een keer" genereert altijd volledig nieuwe opgaves
+- Sidebar opgeruimd: 11 links, rest via Instellingen
+
+### Gefixt
+- TRMNL: correct JSON response op GET, parameters via URL query
+- React Query cache: 30s staleTime, refetch on focus/mount
+- Service worker: geen auto-reload meer bij updates

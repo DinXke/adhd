@@ -8,6 +8,7 @@ import { promisify } from 'util'
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, createReadStream } from 'fs'
 import path from 'path'
 import { requireAuth } from '../middleware/auth'
+import { getApiUsageStats } from '../lib/claude'
 
 const execAsync = promisify(exec)
 const execFileAsync = promisify(execFile)
@@ -198,5 +199,10 @@ export async function upgradeRoutes(fastify: FastifyInstance) {
       .header('Content-Type', 'application/gzip')
       .header('Content-Length', stats.size)
       .send(stream)
+  })
+
+  // ── GET /api/admin/system/api-usage — Claude API kosten ─────
+  fastify.get('/api/admin/system/api-usage', { preHandler: requireAdmin }, async () => {
+    return getApiUsageStats()
   })
 }

@@ -261,6 +261,41 @@ function TrmnlPanel() {
   )
 }
 
+// ── Claude API kosten ───────────────────────────────────────
+function ApiUsagePanel() {
+  const [data, setData] = useState<any>(null)
+  useEffect(() => {
+    api.get('/api/admin/system/api-usage').then(setData).catch(() => {})
+  }, [])
+  if (!data) return null
+  return (
+    <div className="card p-5">
+      <h2 className="font-semibold text-ink mb-3">Claude API kosten</h2>
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: 'Vandaag', cost: data.today?.cost, tokens: data.today?.tokens },
+          { label: 'Deze maand', cost: data.thisMonth?.cost, tokens: data.thisMonth?.tokens },
+          { label: 'Dit jaar', cost: data.thisYear?.cost },
+          { label: 'Totaal', cost: data.allTime?.cost },
+        ].map(r => (
+          <div key={r.label} className="p-3 rounded-xl bg-surface border border-border">
+            <p className="text-xs text-ink-muted mb-0.5">{r.label}</p>
+            <p className="text-sm font-bold text-ink font-mono">
+              {typeof r.cost === 'number' ? `€${r.cost.toFixed(4)}` : '€0.0000'}
+            </p>
+            {r.tokens !== undefined && (
+              <p className="text-[10px] text-ink-muted">{r.tokens?.toLocaleString() ?? 0} tokens</p>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-ink-muted mt-3">
+        Inclusief oefeningen, hints, dagelijkse tips, sociale scripts en rapporten.
+      </p>
+    </div>
+  )
+}
+
 // ── Tijdzone instelling ─────────────────────────────────────
 function TimezonePanel() {
   const [tz, setTz] = useState('Europe/Brussels')
@@ -408,6 +443,9 @@ export function SystemPage() {
         <h1 className="text-2xl font-bold text-ink">Systeembeheer</h1>
         <p className="text-sm text-ink-muted mt-0.5">Updates, backups en versie-informatie</p>
       </div>
+
+      {/* Claude API kosten */}
+      <ApiUsagePanel />
 
       {/* Tijdzone */}
       <TimezonePanel />
