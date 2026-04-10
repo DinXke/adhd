@@ -15,16 +15,47 @@ export async function scheduleRoutes(fastify: FastifyInstance) {
 
     const today = new Date()
     const dayOfWeek = today.getDay() // 0=zondag
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
 
-    const schedule = await prisma.schedule.findFirst({
-      where: { userId: childId, dayOfWeek, isActive: true },
-      include: {
-        activities: {
-          include: { steps: { orderBy: { sortOrder: 'asc' } } },
-          orderBy: { startTime: 'asc' },
-        },
+    // Check of het vandaag vakantie is
+    const vacationPeriod = await prisma.vacationPeriod.findFirst({
+      where: {
+        childId,
+        isActive: true,
+        startDate: { lte: todayEnd },
+        endDate: { gte: todayStart },
       },
     })
+
+    let schedule
+    let isVacation = false
+
+    if (vacationPeriod?.scheduleId) {
+      // Gebruik het vakantieschema
+      schedule = await prisma.schedule.findUnique({
+        where: { id: vacationPeriod.scheduleId },
+        include: {
+          activities: {
+            include: { steps: { orderBy: { sortOrder: 'asc' } } },
+            orderBy: { startTime: 'asc' },
+          },
+        },
+      })
+      isVacation = true
+    } else {
+      // Normaal dagschema
+      schedule = await prisma.schedule.findFirst({
+        where: { userId: childId, dayOfWeek, isActive: true },
+        include: {
+          activities: {
+            include: { steps: { orderBy: { sortOrder: 'asc' } } },
+            orderBy: { startTime: 'asc' },
+          },
+        },
+      })
+      if (vacationPeriod) isVacation = true
+    }
 
     // Voeg "huidige activiteit" info toe
     const nowStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`
@@ -36,7 +67,14 @@ export async function scheduleRoutes(fastify: FastifyInstance) {
       return { ...act, isCurrent, isPast }
     })
 
-    return { schedule, activities, dayOfWeek, date: today.toISOString() }
+    return {
+      schedule,
+      activities,
+      dayOfWeek,
+      date: today.toISOString(),
+      isVacation,
+      vacationTitle: vacationPeriod?.title ?? null,
+    }
   })
 
   // ── GET /api/schedules/:childId — Alle schema's van een kind ─

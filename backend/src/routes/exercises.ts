@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma'
 import { requireAuth, requireParent } from '../middleware/auth'
 import { Subject, ExerciseType } from '@prisma/client'
 import { generateExercises, generateHint, hasClaudeKey } from '../lib/claude'
+import { sendPushToAdmins } from './push'
 
 export async function exerciseRoutes(fastify: FastifyInstance) {
 
@@ -99,6 +100,17 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
         metadata: { subject, theme, difficulty, count: saved.length },
       },
     })
+
+    // Push naar ouders: nieuwe oefeningen wachten op review
+    if (saved.length > 0) {
+      sendPushToAdmins({
+        title: `${saved.length} nieuwe oefeningen wachten op goedkeuring`,
+        body: `Onderwerp: ${subject}. Controleer ze voor Julie ze ziet.`,
+        icon: '/icons/icon-192.png',
+        tag: 'exercise-review',
+        url: '/dashboard/exercises/review',
+      }).catch(() => {})
+    }
 
     return reply.status(201).send({ exercises: saved, count: saved.length })
   })
@@ -279,6 +291,41 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
     }
 
     return { session, correct, total, bonusTokens }
+  })
+
+  // ── GET /api/exercises/generation-stats — AI gebruik stats ───
+  fastify.get('/generation-stats', { preHandler: requireParent }, async () => {
+    const now = new Date()
+
+    const startOfDay = new Date(now)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfYear = new Date(now.getFullYear(), 0, 1)
+
+    const [today, week, month, year, total] = await Promise.all([
+      prisma.exercise.count({ where: { isAiGenerated: true, createdAt: { gte: startOfDay } } }),
+      prisma.exercise.count({ where: { isAiGenerated: true, createdAt: { gte: startOfWeek } } }),
+      prisma.exercise.count({ where: { isAiGenerated: true, createdAt: { gte: startOfMonth } } }),
+      prisma.exercise.count({ where: { isAiGenerated: true, createdAt: { gte: startOfYear } } }),
+      prisma.exercise.count({ where: { isAiGenerated: true } }),
+    ])
+
+    // Kosteninschatting: ~$0.00003 per gegenereerde oefening (batch van 10 = 1 call ≈ $0.0003)
+    const costPer = 0.00003
+    return {
+      stats: {
+        today: { count: today, estimatedCostEur: +(today * costPer).toFixed(5) },
+        week: { count: week, estimatedCostEur: +(week * costPer).toFixed(5) },
+        month: { count: month, estimatedCostEur: +(month * costPer).toFixed(4) },
+        year: { count: year, estimatedCostEur: +(year * costPer).toFixed(4) },
+        allTime: { count: total, estimatedCostEur: +(total * costPer).toFixed(4) },
+      },
+    }
   })
 
   // ── GET /api/exercises/subjects — Vakken met aantallen ────────

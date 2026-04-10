@@ -15,6 +15,24 @@ import { tokenRoutes } from './routes/tokens'
 import { emotionRoutes } from './routes/emotions'
 import { tokenSettingsRoutes, getExtraAllowedOrigins } from './routes/settings'
 import { exerciseRoutes } from './routes/exercises'
+import { inviteRoutes } from './routes/invites'
+import { communicationRoutes } from './routes/communication'
+import { dossierRoutes } from './routes/dossier'
+import { uploadRoutes } from './routes/upload'
+import { dashboardRoutes } from './routes/dashboard'
+import { reportsRoutes } from './routes/reports'
+import { haRoutes } from './routes/ha'
+import { independenceRoutes } from './routes/independence'
+import { socialRoutes } from './routes/social'
+import { trmnlRoutes } from './routes/trmnl'
+import { pushRoutes } from './routes/push'
+import { upgradeRoutes } from './routes/upgrade'
+import { moneyRoutes } from './routes/money'
+import { recipeRoutes } from './routes/recipes'
+import { tipsRoutes } from './routes/tips'
+import { appointmentRoutes } from './routes/appointments'
+import { vacationRoutes } from './routes/vacations'
+import multipart from '@fastify/multipart'
 
 const app = Fastify({
   logger: {
@@ -25,6 +43,9 @@ const app = Fastify({
 })
 
 async function main() {
+  // ── Multipart (bestandsupload) ───────────────────────────────
+  await app.register(multipart, { limits: { fileSize: 26 * 1024 * 1024 } })
+
   // ── Security ────────────────────────────────────────────────
   await app.register(helmet, {
     contentSecurityPolicy: false, // Beheerd door Nginx
@@ -76,6 +97,23 @@ async function main() {
   await app.register(emotionRoutes, { prefix: '/api/emotions' })
   await app.register(tokenSettingsRoutes, { prefix: '/api/admin/settings' })
   await app.register(exerciseRoutes, { prefix: '/api/exercises' })
+  await app.register(inviteRoutes, { prefix: '/api/invites' })
+  await app.register(communicationRoutes, { prefix: '/api/communication' })
+  await app.register(dossierRoutes, { prefix: '/api/dossier' })
+  await app.register(uploadRoutes, { prefix: '/api/upload' })
+  await app.register(dashboardRoutes, { prefix: '/api/dashboard' })
+  await app.register(reportsRoutes, { prefix: '/api/reports' })
+  await app.register(haRoutes, { prefix: '/api/ha' })
+  await app.register(independenceRoutes, { prefix: '/api/independence' })
+  await app.register(socialRoutes, { prefix: '/api/social' })
+  await app.register(trmnlRoutes, { prefix: '/api/trmnl' })
+  await app.register(pushRoutes)
+  await app.register(upgradeRoutes)
+  await app.register(moneyRoutes, { prefix: '/api/money' })
+  await app.register(recipeRoutes, { prefix: '/api/recipes' })
+  await app.register(tipsRoutes, { prefix: '/api/tips' })
+  await app.register(appointmentRoutes, { prefix: '/api/appointments' })
+  await app.register(vacationRoutes, { prefix: '/api/vacations' })
 
   // ── Graceful shutdown ────────────────────────────────────────
   const shutdown = async (signal: string) => {

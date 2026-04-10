@@ -1,0 +1,33 @@
+<div class="layout">
+  <div class="columns">
+    <div class="column">
+      <span class="title title--small">{{ title }}</span>
+      <div class="content">
+        <div class="data-list" data-list-limit="true" data-list-max-height="340">
+          {% for item in activities %}
+          <div class="item">
+            <span class="label">{{ item.marker }} {{ item.title }}</span>
+            <span class="value">{{ item.time }}</span>
+          </div>
+          {% endfor %}
+          {% if activities.size == 0 %}
+          <div class="item">
+            <span class="label">Geen schema vandaag</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="tag_columns">
+        <span class="tag">{{ token_tag }}</span>
+        <span class="tag">{{ reward_tag }}</span>
+        {% if emotion_tag %}
+        <span class="tag">{{ emotion_tag }}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="title_bar">
+    <span class="title">GRIP</span>
+    <span class="instance">{{ date_display }}</span>
+  </div>
+</div>

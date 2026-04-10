@@ -138,6 +138,18 @@ model User {
   // TRMNL
   trmnlDevice    TrmnlDevice?
 
+  // Fase 8
+  independenceTasks        IndependenceTask[]       @relation("IndependenceCreator")
+  independenceCompletions  IndependenceCompletion[] @relation("IndependenceChild")
+  socialScripts            SocialScript[]
+  pushSubscriptions        PushSubscription[]
+  moneyTransactions        MoneyTransaction[]       @relation("MoneyChild")
+  moneySavingGoals         MoneySavingGoal[]        @relation("MoneySavingGoalChild")
+  recipes                  Recipe[]                 @relation("RecipeCreator")
+  appointmentsAsChild      Appointment[]            @relation("AppointmentChild")
+  appointmentsCreated      Appointment[]            @relation("AppointmentCreator")
+  vacationPeriods          VacationPeriod[]         @relation("VacationChild")
+
   @@map("users")
 }
 
@@ -208,11 +220,13 @@ model Schedule {
   id         String   @id @default(cuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dayOfWeek  Int      // 0=zondag, 1=maandag, ..., 6=zaterdag
+  dayOfWeek  Int      // 0=zondag..6=zaterdag, 7=vakantie-maandag, 8=vakantie-dinsdag, etc.
+  label      String?  // "Vakantie maandag", null = normaal
   activities Activity[]
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  vacationPeriods VacationPeriod[]
 
   @@unique([userId, dayOfWeek])
   @@map("schedules")
@@ -501,6 +515,189 @@ model TrmnlDevice {
   createdAt      DateTime @default(now())
 
   @@map("trmnl_devices")
+}
+
+// ── Levensvaardigheden ────────────────────────────────────────
+
+model IndependenceTask {
+  id          String   @id @default(cuid())
+  childId     String   // specifiek voor dit kind
+  child       User     @relation("IndependenceCreator", fields: [childId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  icon        String   @default("✅")
+  category    String   @default("thuis") // "thuis", "school", "sociaal", "zelfredzaamheid"
+  frequency   String   @default("daily") // "daily", "weekly", "milestone"
+  minAge      Int?
+  maxAge      Int?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  completions IndependenceCompletion[]
+  createdAt   DateTime @default(now())
+
+  @@map("independence_tasks")
+}
+
+model IndependenceCompletion {
+  id          String           @id @default(cuid())
+  taskId      String
+  task        IndependenceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  childId     String
+  child       User             @relation("IndependenceChild", fields: [childId], references: [id], onDelete: Cascade)
+  completedAt DateTime         @default(now())
+  note        String?
+
+  @@map("independence_completions")
+}
+
+// ── Sociale Scripts ───────────────────────────────────────────
+
+model SocialScript {
+  id            String   @id @default(cuid())
+  childId       String
+  child         User     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title         String
+  scenario      String
+  category      String   @default("algemeen") // "hulp_vragen", "conflict", "vrienden", "regels", "algemeen"
+  choices       Json     // [{text, outcome, isPositive, tip}]
+  difficulty    Int      @default(1)
+  isAiGenerated Boolean  @default(false)
+  playCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@map("social_scripts")
+}
+
+// ── Push Subscriptions ────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@map("push_subscriptions")
+}
+
+// ── Geldmodule ───────────────────────────────────────────────
+
+model MoneyTransaction {
+  id        String   @id @default(cuid())
+  childId   String
+  child     User     @relation("MoneyChild", fields: [childId], references: [id], onDelete: Cascade)
+  amount    Int      // centen (positief = storten, negatief = uitgeven)
+  type      String   // "allowance", "earning", "spending", "saving"
+  note      String?
+  grantedBy String?  // userId van ouder bij manuele stortingen
+  createdAt DateTime @default(now())
+
+  @@map("money_transactions")
+}
+
+model MoneySavingGoal {
+  id          String   @id @default(cuid())
+  childId     String
+  child       User     @relation("MoneySavingGoalChild", fields: [childId], references: [id], onDelete: Cascade)
+  title       String
+  targetAmount Int     // centen
+  icon        String   @default("🎯")
+  isReached   Boolean  @default(false)
+  reachedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("money_saving_goals")
+}
+
+// ── Recepten ──────────────────────────────────────────────────
+
+model Recipe {
+  id          String       @id @default(cuid())
+  childId     String
+  child       User         @relation("RecipeCreator", fields: [childId], references: [id], onDelete: Cascade)
+  title       String
+  icon        String       @default("🍳")
+  description String?
+  steps       RecipeStep[]
+  duration    Int?         // minuten
+  difficulty  Int          @default(1) // 1-3
+  isActive    Boolean      @default(true)
+  playCount   Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  @@map("recipes")
+}
+
+model RecipeStep {
+  id          String  @id @default(cuid())
+  recipeId    String
+  recipe      Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  sortOrder   Int
+  title       String
+  description String?
+  duration    Int?    // seconden
+  imageUrl    String?
+  tip         String?
+
+  @@map("recipe_steps")
+}
+
+// ── Dagelijkse ouder-tip ──────────────────────────────────────
+
+model DailyTip {
+  id        String   @id @default(cuid())
+  childId   String
+  content   String
+  date      String   // YYYY-MM-DD
+  createdAt DateTime @default(now())
+
+  @@unique([childId, date])
+  @@map("daily_tips")
+}
+
+// ── Vakantieperiodes ─────────────────────────────────────────
+
+model VacationPeriod {
+  id          String   @id @default(cuid())
+  childId     String
+  child       User     @relation("VacationChild", fields: [childId], references: [id], onDelete: Cascade)
+  title       String   // "Kerstvakantie", "Zomervakantie", "Vrije dag"
+  startDate   DateTime
+  endDate     DateTime
+  scheduleId  String?  // optioneel: gebruik dit vakantieschema i.p.v. normaal
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("vacation_periods")
+}
+
+// ── Afspraken/Kalender ────────────────────────────────────────
+
+model Appointment {
+  id              String    @id @default(cuid())
+  childId         String
+  child           User      @relation("AppointmentChild", fields: [childId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       User      @relation("AppointmentCreator", fields: [createdById], references: [id])
+  title           String
+  icon            String    @default("📅")
+  color           String    @default("#7BAFA3")
+  location        String?
+  notes           String?
+  startTime       String    // "14:00"
+  durationMinutes Int       @default(60)
+  isRecurring     Boolean   @default(false)
+  dayOfWeek       Int?      // 0=zondag..6=zaterdag (bij recurring)
+  date            DateTime? // specifieke datum (bij éénmalig)
+  showInChildView Boolean   @default(true)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("appointments")
 }
 
 // ── Audit Log ─────────────────────────────────────────────────

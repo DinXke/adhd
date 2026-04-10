@@ -4,6 +4,17 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import './styles/global.css'
+import { initAccessibility } from './stores/accessibilityStore'
+
+// Toegankelijkheidsvoorkeuren direct toepassen vóór render
+initAccessibility()
+
+// Service Worker registreren voor PWA + push
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+  })
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

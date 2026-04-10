@@ -10,6 +10,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../../stores/authStore'
 import { api } from '../../lib/api'
+import { useSpeechInput } from '../../hooks/useSpeechInput'
 
 // ── Types ──────────────────────────────────────────────────────
 interface ExerciseQuestion {
@@ -50,7 +51,57 @@ const SUBJECTS = [
   { key: 'wiskunde', label: 'Wiskunde', emoji: '🔢', color: '#E8734A' },
   { key: 'taal', label: 'Taal', emoji: '📖', color: '#7BAFA3' },
   { key: 'spelling', label: 'Spelling', emoji: '✏️', color: '#5B8C5A' },
+  { key: 'wereldorientatie', label: 'Wereld', emoji: '🌍', color: '#9B7CC8' },
 ]
+
+// TTS knop component
+function TtsButton({ text }: { text: string }) {
+  const [speaking, setSpeaking] = useState(false)
+
+  const speak = () => {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    if (speaking) { setSpeaking(false); return }
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'nl-NL'
+    utterance.rate = 0.9
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => setSpeaking(false)
+    setSpeaking(true)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  if (!window.speechSynthesis) return null
+
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.9 }}
+      onClick={speak}
+      title={speaking ? 'Stop voorlezen' : 'Voorlezen'}
+      className="absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center"
+      style={{
+        background: speaking ? 'var(--accent-warm)' : 'var(--bg-surface)',
+        border: '1.5px solid var(--accent-calm)',
+      }}
+    >
+      {speaking ? (
+        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1, repeat: Infinity }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+          </svg>
+        </motion.div>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+      )}
+    </motion.button>
+  )
+}
 
 const DIFFICULTY_LABELS = ['', 'Makkelijk', 'Gemiddeld', 'Moeilijk', 'Extra moeilijk', 'Uitdaging']
 
@@ -74,6 +125,10 @@ function ExerciseRenderer({
   const [fillValue, setFillValue] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const correctAnswer = String(q.answer)
+
+  const speech = useSpeechInput((transcript) => {
+    setFillValue(transcript)
+  })
 
   // Reset bij nieuwe oefening
   useEffect(() => {
@@ -102,15 +157,26 @@ function ExerciseRenderer({
         key={item.id + '-q'}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card p-6 text-center"
-        style={{ borderLeft: `4px solid var(--accent-primary)` }}
+        className="card p-6 text-center relative"
+        style={{
+          borderLeft: `4px solid ${item.exercise.tags?.includes('wist_je_dat') ? '#9B7CC8' : 'var(--accent-primary)'}`,
+          background: item.exercise.tags?.includes('wist_je_dat') ? 'rgba(155,124,200,0.06)' : undefined,
+        }}
       >
+        {item.exercise.tags?.includes('wist_je_dat') && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-3"
+            style={{ background: 'rgba(155,124,200,0.15)', color: '#9B7CC8' }}>
+            <span className="text-sm">🌍</span>
+            <span className="font-display font-bold text-xs">Wist je dat?</span>
+          </div>
+        )}
         <p
           className="font-display font-bold text-ink leading-snug"
           style={{ fontSize: 'clamp(20px, 5vw, 28px)' }}
         >
           {q.question}
         </p>
+        <TtsButton text={q.question} />
       </motion.div>
 
       {/* Hint of uitleg */}
@@ -210,7 +276,7 @@ function ExerciseRenderer({
             style={{
               padding: '16px',
               background: 'var(--bg-card)',
-              border: '2px solid var(--border-color)',
+              border: `2px solid ${speech.isListening ? 'var(--accent-warm)' : 'var(--border-color)'}`,
               color: 'var(--text-primary)',
               outline: 'none',
             }}
@@ -218,6 +284,40 @@ function ExerciseRenderer({
             onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
             autoFocus
           />
+          {/* Microfoon knop (alleen als Web Speech ondersteund wordt) */}
+          {speech.isSupported && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.92 }}
+              onClick={speech.isListening ? speech.stop : speech.start}
+              disabled={isAnswering}
+              className="w-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: speech.isListening ? 'var(--accent-warm)' : 'var(--bg-card)',
+                border: `2px solid ${speech.isListening ? 'var(--accent-warm)' : 'var(--border-color)'}`,
+              }}
+              title={speech.isListening ? 'Stop opnemen' : 'Spreek je antwoord in'}
+            >
+              {speech.isListening ? (
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="none">
+                    <rect x="9" y="2" width="6" height="12" rx="3"/>
+                    <path d="M5 10a7 7 0 0 0 14 0" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                    <path d="M12 19v3M9 22h6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </motion.div>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round">
+                  <rect x="9" y="2" width="6" height="12" rx="3" fill="var(--bg-surface)" stroke="var(--text-muted)"/>
+                  <path d="M5 10a7 7 0 0 0 14 0"/>
+                  <path d="M12 19v3M9 22h6"/>
+                </svg>
+              )}
+            </motion.button>
+          )}
           <button
             type="submit"
             disabled={!fillValue.trim() || isAnswering}

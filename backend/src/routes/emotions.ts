@@ -2,6 +2,9 @@ import { FastifyInstance } from 'fastify'
 import { prisma } from '../lib/prisma'
 import { requireAuth, requireParent } from '../middleware/auth'
 import { EmotionLevel } from '@prisma/client'
+import { sendPushToAdmins } from './push'
+
+const NEGATIVE_EMOTIONS = new Set(['verdrietig', 'boos', 'bang', 'gestrest', 'overwhelmed'])
 
 export async function emotionRoutes(fastify: FastifyInstance) {
   // ── POST /api/emotions — Check-in opslaan ─────────────────────
@@ -43,6 +46,22 @@ export async function emotionRoutes(fastify: FastifyInstance) {
         },
       })
       tokensAwarded = config.tokensPerCompletion
+    }
+
+    // Push naar ouders bij negatieve emotie
+    if (NEGATIVE_EMOTIONS.has(level.toLowerCase())) {
+      const child = await prisma.user.findUnique({ where: { id: childId }, select: { name: true } })
+      const emotionLabels: Record<string, string> = {
+        verdrietig: 'verdrietig 😢', boos: 'boos 😠', bang: 'bang 😨',
+        gestrest: 'gestrest 😰', overwhelmed: 'overweldigd 😵',
+      }
+      sendPushToAdmins({
+        title: `${child?.name ?? 'Julie'} voelt zich ${emotionLabels[level.toLowerCase()] ?? level}`,
+        body: note ? `"${note}"` : 'Klik voor meer info.',
+        icon: '/icons/icon-192.png',
+        tag: 'emotion-alert',
+        url: '/dashboard',
+      }).catch(() => {})
     }
 
     return reply.status(201).send({ log, tokensAwarded })

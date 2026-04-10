@@ -203,6 +203,45 @@ export async function tokenRoutes(fastify: FastifyInstance) {
     return { configs }
   })
 
+  // ── POST /api/tokens/:childId/reset — Reset tokens en voortgang ─
+  fastify.post('/:childId/reset', { preHandler: requireParent }, async (request) => {
+    const { childId } = request.params as { childId: string }
+    const { resetTokens, resetExercises, resetEmotions } = request.body as {
+      resetTokens?: boolean
+      resetExercises?: boolean
+      resetEmotions?: boolean
+    }
+
+    const results: string[] = []
+
+    if (resetTokens) {
+      await prisma.tokenTransaction.deleteMany({ where: { childId } })
+      results.push('tokens')
+    }
+
+    if (resetExercises) {
+      await prisma.exerciseSession.deleteMany({ where: { childId } })
+      results.push('oefeningen')
+    }
+
+    if (resetEmotions) {
+      await prisma.emotionLog.deleteMany({ where: { childId } })
+      results.push('emotie-logs')
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        userId: request.user.sub,
+        action: 'child.reset',
+        entityType: 'user',
+        entityId: childId,
+        metadata: { resetTokens, resetExercises, resetEmotions },
+      },
+    })
+
+    return { ok: true, reset: results }
+  })
+
   // ── PUT /api/tokens/:childId/config — Config opslaan ─────
   fastify.put('/:childId/config', { preHandler: requireParent }, async (request) => {
     const { childId } = request.params as { childId: string }

@@ -217,3 +217,72 @@ button:focus-visible, a:focus-visible {
 .text-token { color: var(--accent-token); }
 .text-success { color: var(--accent-success); }
 .bg-accent-soft { background-color: rgba(232, 115, 74, 0.08); }
+
+/* ── Toegankelijkheid ────────────────────────────────────────── */
+
+/* Atkinson Hyperlegible — dyslexievriendelijk alternatief, geladen via Google Fonts */
+
+html.font-dyslexic {
+  --font-display: 'Atkinson Hyperlegible', sans-serif;
+  --font-body: 'Atkinson Hyperlegible', sans-serif;
+  --letter-spacing: 0.05em;
+  --line-height: 1.8;
+}
+
+html.text-large {
+  --font-size-body: 22px;
+  --font-size-heading: 32px;
+}
+html.text-large [data-theme="adult"] {
+  --font-size-body: 18px;
+}
+
+html.high-contrast [data-theme="child"] {
+  --bg-primary: #fff8ee;
+  --text-primary: #1a0f00;
+  --text-muted: #4a3a28;
+  --accent-warm: #c05a28;
+}
+html.high-contrast [data-theme="adult"] {
+  --bg-primary: #ffffff;
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --border: #888888;
+}
+
+/* ── PDF / Print ─────────────────────────────────────────────── */
+
+@media print {
+  /* Verberg navigatie en knoppen */
+  .sidebar, .bottom-nav, nav, button, .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt !important;
+  }
+
+  .print-full-width {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .card, [class*="bg-card"], [class*="bg-surface"] {
+    border: 1px solid #ccc !important;
+    background: white !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  /* Grafieken verbergen — tekst-samenvatting blijft */
+  .recharts-wrapper, canvas {
+    display: none !important;
+  }
+
+  @page {
+    margin: 1.5cm;
+  }
+}

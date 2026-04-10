@@ -1,0 +1,22 @@
+name: "GRIP - Dagplanning & Tokens"
+description: "Toont de dagplanning en token-voortgang van je kind (ADHD-app) op je TRMNL e-ink scherm."
+strategy: polling
+polling_url: "{{grip_url}}/api/trmnl/markup"
+polling_verb: POST
+polling_headers:
+  Content-Type: application/json
+polling_body: '{"user_uuid":"{{user_uuid}}"}'
+refresh_rate: 900
+custom_fields:
+  - name: grip_url
+    label: "GRIP Server URL"
+    type: text
+    placeholder: "https://julie.scheepers.one"
+    hint: "Het adres van je GRIP-installatie (zonder trailing slash)"
+    required: true
+  - name: user_uuid
+    label: "TRMNL User UUID"
+    type: text
+    placeholder: "Je TRMNL user UUID (zie account-instellingen)"
+    hint: "Wordt automatisch meegegeven, laat leeg indien onzeker"
+    required: false

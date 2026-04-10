@@ -5,9 +5,11 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../stores/authStore'
-import { useAllSchedules, useAddActivity, useDeleteActivity, Schedule, Activity, NewActivityInput } from '../../lib/queries'
+import { useMyChildren, useAllSchedules, useAddActivity, useDeleteActivity, Schedule, Activity, NewActivityInput } from '../../lib/queries'
 import { IconPlus, IconBack } from '../../components/icons/NavIcons'
+import { api } from '../../lib/api'
 
 const DAY_NAMES = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
 
@@ -212,30 +214,212 @@ function ActivityRow({ act, onDelete }: { act: Activity; onDelete: () => void })
   )
 }
 
+// ── Vakantie panel ────────────────────────────────────────────
+function VacationPanel({ childId, schedules }: { childId: string; schedules: Schedule[] }) {
+  const qc = useQueryClient()
+  const { data } = useQuery({
+    queryKey: ['vacations', childId],
+    queryFn: () => api.get<{ periods: any[] }>(`/api/vacations/${childId}`),
+    enabled: !!childId,
+  })
+  const [showForm, setShowForm] = useState(false)
+  const [title, setTitle] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [scheduleId, setScheduleId] = useState('')
+
+  const createMutation = useMutation({
+    mutationFn: () => api.post(`/api/vacations/${childId}`, {
+      title, startDate, endDate,
+      scheduleId: scheduleId || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vacations', childId] })
+      setShowForm(false); setTitle(''); setStartDate(''); setEndDate(''); setScheduleId('')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/vacations/${childId}/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['vacations', childId] }),
+  })
+
+  const periods = data?.periods ?? []
+  // Vakantie-specifieke schema's (dayOfWeek >= 7)
+  const vacationSchedules = schedules.filter(s => s.dayOfWeek >= 7)
+
+  const inputCls = "w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-ink focus:border-accent focus:outline-none"
+
+  return (
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-display font-bold text-ink text-lg">🏖️ Vakantieperiodes</h2>
+          <p className="text-xs text-ink-muted mt-0.5">
+            Stel vrije dagen en vakanties in — koppel optioneel een vakantieschema
+          </p>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-3 py-2 rounded-xl bg-accent text-white text-sm font-medium"
+        >
+          + Periode
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-4">
+            <div className="card p-4 space-y-3">
+              <input value={title} onChange={e => setTitle(e.target.value)}
+                placeholder="bv. Herfstvakantie, Vrije dag, Zomervakantie"
+                className={inputCls} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-ink-muted mb-1 block">Van</label>
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs text-ink-muted mb-1 block">Tot</label>
+                  <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-ink-muted mb-1 block">
+                  Vakantieschema (optioneel)
+                </label>
+                <select value={scheduleId} onChange={e => setScheduleId(e.target.value)} className={inputCls}>
+                  <option value="">Geen schema (vrije dag)</option>
+                  {vacationSchedules.map(s => (
+                    <option key={s.id} value={s.id}>{s.label ?? `Vakantie-schema ${s.dayOfWeek - 6}`}</option>
+                  ))}
+                  {schedules.filter(s => s.dayOfWeek < 7).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {DAY_NAMES[s.dayOfWeek]} (normaal schema)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-ink-muted mt-1">
+                  Tip: maak een vakantieschema aan via dag 8+ (Vakantie Ma, Vakantie Di, ...) in de dagtabs hierboven
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowForm(false)}
+                  className="flex-1 py-2 rounded-xl border border-border text-sm text-ink-muted">Annuleren</button>
+                <button
+                  onClick={() => createMutation.mutate()}
+                  disabled={!title || !startDate || !endDate || createMutation.isPending}
+                  className="flex-1 py-2 rounded-xl bg-accent text-white text-sm font-medium disabled:opacity-50">
+                  {createMutation.isPending ? 'Opslaan...' : 'Opslaan'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {periods.length === 0 ? (
+        <div className="text-center py-6 bg-surface rounded-xl border border-border">
+          <p className="text-sm text-ink-muted">Nog geen vakantieperiodes ingesteld</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {periods.map((p: any) => {
+            const start = new Date(p.startDate)
+            const end = new Date(p.endDate)
+            const now = new Date()
+            const isActive = now >= start && now <= end
+            const isPast = now > end
+            return (
+              <div key={p.id}
+                className="card p-3 flex items-center gap-3"
+                style={{ opacity: isPast ? 0.5 : 1, borderLeft: isActive ? '3px solid #9B7CC8' : '3px solid transparent' }}>
+                <span className="text-xl flex-shrink-0">{isActive ? '🏖️' : isPast ? '📅' : '📆'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-ink text-sm">{p.title}</p>
+                  <p className="text-xs text-ink-muted">
+                    {start.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' })} — {end.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {p.schedule ? ` · Schema: ${p.schedule.label ?? 'dag ' + p.schedule.dayOfWeek}` : ' · Vrije dag'}
+                    {isActive && ' · Nu actief'}
+                  </p>
+                </div>
+                <button onClick={() => deleteMutation.mutate(p.id)}
+                  className="p-1.5 rounded-lg border border-border text-ink-muted hover:border-red-400 hover:text-red-500 transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  </svg>
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ScheduleEditorPage() {
   const { user } = useAuthStore()
-  // In een echte multi-kind setup: kind kiezen. Nu: eerste kind via users/children.
-  const [childId] = useState<string>('') // TODO: kind-picker
+  const { data: childrenData } = useMyChildren()
+  const children = childrenData?.children ?? []
+  const [selectedChildId, setSelectedChildId] = useState<string>('')
+  const childId = selectedChildId || children[0]?.id || user?.id || ''
   const [selectedDay, setSelectedDay] = useState(new Date().getDay())
   const [showForm, setShowForm] = useState(false)
 
-  const { data, isLoading } = useAllSchedules(childId || user?.id)
+  const { data, isLoading, refetch } = useAllSchedules(childId)
   const deleteActivity = useDeleteActivity()
+  const [creating, setCreating] = useState(false)
 
   const schedule = data?.schedules.find((s: Schedule) => s.dayOfWeek === selectedDay)
 
+  // Auto-create schedule for selected day if it doesn't exist
+  async function ensureScheduleAndShowForm() {
+    if (schedule) {
+      setShowForm(true)
+      return
+    }
+    if (!childId) return
+    setCreating(true)
+    try {
+      await api.post('/api/schedules', { childId, dayOfWeek: selectedDay })
+      await refetch()
+      setShowForm(true)
+    } catch {}
+    setCreating(false)
+  }
+
   return (
     <div>
+      {/* Kind-selector */}
+      {children.length > 1 && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {children.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedChildId(c.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                childId === c.id ? 'border-accent bg-accent/10 text-accent' : 'border-border text-ink-muted'
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-6">
         <h1 className="font-display font-bold text-ink flex-1" style={{ fontSize: 'var(--font-size-heading)' }}>
           Schema-editor
         </h1>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={ensureScheduleAndShowForm}
+          disabled={creating}
           className="btn-primary text-sm px-4"
           style={{ minHeight: 40, borderRadius: 'var(--btn-radius)' }}
         >
-          <IconPlus size={16} className="mr-1" /> Activiteit
+          {creating ? 'Schema aanmaken...' : <><IconPlus size={16} className="mr-1" /> Activiteit</>}
         </button>
       </div>
 
@@ -278,11 +462,17 @@ export default function ScheduleEditorPage() {
             </div>
           </motion.div>
         )}
-        {showForm && !schedule && (
+        {showForm && !schedule && !creating && (
           <div className="card p-4 mb-4 text-center">
-            <p className="font-body text-ink-muted text-sm">
-              Maak eerst een schema aan voor {DAY_NAMES[selectedDay]}.
+            <p className="font-body text-ink-muted text-sm mb-3">
+              Nog geen schema voor {DAY_NAMES[selectedDay]}.
             </p>
+            <button
+              onClick={ensureScheduleAndShowForm}
+              className="px-4 py-2 rounded-xl bg-accent text-white text-sm font-medium"
+            >
+              Schema aanmaken
+            </button>
           </div>
         )}
       </AnimatePresence>
@@ -316,6 +506,9 @@ export default function ScheduleEditorPage() {
           <p className="font-body text-ink-muted text-sm">Geen schema voor {DAY_NAMES[selectedDay]}.</p>
         </div>
       )}
+
+      {/* Vakantieperiodes */}
+      {childId && <VacationPanel childId={childId} schedules={data?.schedules ?? []} />}
     </div>
   )
 }

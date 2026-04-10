@@ -1,0 +1,37 @@
+<div class="layout layout--half">
+  <div class="columns">
+    <div class="column">
+      <span class="title title--small">Tokens</span>
+      <div class="content">
+        <div class="data-list">
+          <div class="item">
+            <span class="label">Saldo</span>
+            <span class="value">{{ balance }} st</span>
+          </div>
+          <div class="item">
+            <span class="label">Vandaag</span>
+            <span class="value">+{{ earned_today }}</span>
+          </div>
+          {% if next_reward_title %}
+          <div class="item">
+            <span class="label">{{ next_reward_title }}</span>
+            <span class="value">{{ next_reward_cost }} st</span>
+          </div>
+          <div class="item">
+            <span class="label">{{ progress_bar }}</span>
+          </div>
+          {% endif %}
+          {% if streak > 1 %}
+          <div class="item">
+            <span class="label">{{ streak }} dagen streak!</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="title_bar">
+    <span class="title">GRIP</span>
+    <span class="instance">{{ child_name }}</span>
+  </div>
+</div>

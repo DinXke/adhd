@@ -1,0 +1,38 @@
+{
+  "name": "GRIP — Groei, Routine, Inzicht, Planning",
+  "short_name": "GRIP",
+  "description": "Dagstructuur, taken en oefeningen voor kinderen met ADHD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDF6EC",
+  "theme_color": "#E8734A",
+  "orientation": "portrait-primary",
+  "lang": "nl",
+  "categories": ["education", "health"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mijn Dag",
+      "url": "/app/day",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Tokens",
+      "url": "/app/tokens",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

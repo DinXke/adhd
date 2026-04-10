@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useUpdateAvatar } from '../../lib/queries'
 import { AvatarDisplay, AVATARS } from '../../components/AvatarDisplay'
+import { useAccessibilityStore } from '../../stores/accessibilityStore'
+import { useAuthStore } from '../../stores/authStore'
 
 interface MyProfile {
   id: string
@@ -75,6 +78,100 @@ function AvatarPicker({ current, onSelect }: { current: string; onSelect: (id: s
   )
 }
 
+// ── Toegankelijkheid toggle ────────────────────────────────────
+function AccessibilityPanel() {
+  const { dyslexicFont, largeText, highContrast, setDyslexicFont, setLargeText, setHighContrast } = useAccessibilityStore()
+
+  const toggles = [
+    {
+      label: 'Dyslexie-lettertype',
+      sub: 'Makkelijker leesbaar lettertype',
+      value: dyslexicFont,
+      set: setDyslexicFont,
+      icon: '📖',
+    },
+    {
+      label: 'Grote letters',
+      sub: 'Tekst iets groter maken',
+      value: largeText,
+      set: setLargeText,
+      icon: '🔡',
+    },
+    {
+      label: 'Hoog contrast',
+      sub: 'Sterkere kleuren en randen',
+      value: highContrast,
+      set: setHighContrast,
+      icon: '🌗',
+    },
+  ]
+
+  return (
+    <div className="bg-[var(--bg-card)] rounded-3xl p-5 border-2 border-[var(--accent-calm)]/20 mb-6">
+      <h2 className="font-display font-bold text-lg text-[var(--text-primary)] mb-4 text-center">
+        Leesinstellingen
+      </h2>
+      <div className="space-y-3">
+        {toggles.map(t => (
+          <div key={t.label} className="flex items-center gap-3">
+            <span className="text-2xl">{t.icon}</span>
+            <div className="flex-1">
+              <p className="font-display font-bold text-[var(--text-primary)] text-sm">{t.label}</p>
+              <p className="font-body text-xs text-[var(--text-muted)]">{t.sub}</p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => t.set(!t.value)}
+              className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ${t.value ? 'bg-[var(--accent-warm)]' : 'bg-[var(--bg-surface)]'}`}
+              style={{ border: '2px solid var(--accent-calm)' }}
+            >
+              <motion.div
+                animate={{ x: t.value ? 24 : 2 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow"
+                style={{ left: 0 }}
+              />
+            </motion.button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Snelkoppelingen naar andere features ──────────────────────
+function QuickLinks() {
+  const navigate = useNavigate()
+  const links = [
+    { to: '/app/vaardigheden', label: 'Mijn vaardigheden', icon: '💪', sub: 'Afvinken wat je kunt!' },
+    { to: '/app/social', label: 'Sociale situaties', icon: '💬', sub: 'Oefenen met keuzes' },
+    { to: '/app/geld', label: 'Mijn spaarpotje', icon: '🐷', sub: 'Geld sparen voor een doel' },
+    { to: '/app/recepten', label: 'Mijn recepten', icon: '🍳', sub: 'Stap-voor-stap koken' },
+  ]
+  return (
+    <div className="space-y-3 mb-6">
+      {links.map(link => (
+        <motion.button
+          key={link.to}
+          onClick={() => navigate(link.to)}
+          whileTap={{ scale: 0.97 }}
+          className="w-full text-left flex items-center gap-4 p-4 rounded-2xl border-2 bg-[var(--bg-card)]"
+          style={{ borderColor: 'var(--border-color)' }}
+        >
+          <span className="text-3xl">{link.icon}</span>
+          <div>
+            <p className="font-display font-bold text-[var(--text-primary)]">{link.label}</p>
+            <p className="font-body text-sm text-[var(--text-muted)]">{link.sub}</p>
+          </div>
+          <svg className="ml-auto text-[var(--text-muted)]" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </motion.button>
+      ))}
+    </div>
+  )
+}
+
 // ── Hoofdpagina ────────────────────────────────────────────────
 export function ChildSettingsPage() {
   const { data: profile, isLoading } = useQuery({
@@ -82,11 +179,19 @@ export function ChildSettingsPage() {
     queryFn: () => api.get<MyProfile>('/api/users/me'),
   })
 
+  const { logout } = useAuthStore()
+  const navigate = useNavigate()
   const updateAvatar = useUpdateAvatar()
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
 
   const currentAvatar = selectedAvatar ?? profile?.avatarId ?? 'neutraal-1'
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   async function handleSave() {
     if (!selectedAvatar) return
@@ -142,6 +247,12 @@ export function ChildSettingsPage() {
         </p>
       )}
 
+      {/* Snelkoppelingen */}
+      <QuickLinks />
+
+      {/* Leesinstellingen */}
+      <AccessibilityPanel />
+
       {/* Avatar picker */}
       <div className="bg-[var(--bg-card)] rounded-3xl p-5 border-2 border-[var(--accent-calm)]/20 mb-6">
         <h2 className="font-display font-bold text-lg text-[var(--text-primary)] mb-4 text-center">
@@ -187,6 +298,44 @@ export function ChildSettingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Uitloggen */}
+      <div className="mt-6 mb-8">
+        {!confirmLogout ? (
+          <button
+            onClick={() => setConfirmLogout(true)}
+            className="w-full py-3 rounded-2xl font-display font-bold text-base"
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '2px solid var(--border-color)' }}
+          >
+            Uitloggen
+          </button>
+        ) : (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-4 rounded-2xl text-center"
+              style={{ background: 'var(--bg-card)', border: '2px solid var(--accent-warm)' }}
+            >
+              <p className="font-display font-bold text-[var(--text-primary)] mb-3">
+                Wil je echt uitloggen?
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmLogout(false)}
+                  className="flex-1 py-2.5 rounded-xl font-display font-bold"
+                  style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}>
+                  Nee
+                </button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleLogout}
+                  className="flex-1 py-2.5 rounded-xl font-display font-bold text-white"
+                  style={{ background: 'var(--accent-warm)' }}>
+                  Ja, uitloggen
+                </motion.button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </div>
     </div>
   )
 }

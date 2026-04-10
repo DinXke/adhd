@@ -2,6 +2,53 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   IconHome, IconExercise, IconTokens, IconCommunication, IconDossier, IconSettings
 } from '../icons/NavIcons'
+
+// Vaardigheden-icoon — vinkjeslijst
+function IconSkills({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M6 8L8 10L11 7" stroke="currentColor" />
+      <path d="M15 9H26" stroke="currentColor" />
+      <path d="M6 16L8 18L11 15" stroke="currentColor" />
+      <path d="M15 17H26" stroke="currentColor" />
+      <path d="M6 24L8 26L11 23" stroke="currentColor" />
+      <path d="M15 25H22" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Sociale scripts-icoon — gespreksbubbels
+function IconSocial({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M5 7C5 5.9 5.9 5 7 5H20C21.1 5 22 5.9 22 7V14C22 15.1 21.1 16 20 16H14L9 20V16H7C5.9 16 5 15.1 5 14V7Z" stroke="currentColor" />
+      <path d="M22 12H25C26.1 12 27 12.9 27 14V20C27 21.1 26.1 22 25 22H23V25L19 22H15C13.9 22 13 21.1 13 20V18" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Voortgang-icoon — grafiek omhoog
+function IconProgress({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M4 24L12 14L18 19L26 8" stroke="currentColor" />
+      <path d="M23 8H27V12" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Hulpverleners-icoon (persoon met sleutel/koppeling)
+function IconCaregivers({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <circle cx="12" cy="9" r="4" stroke="currentColor" />
+      <path d="M4 26C4 21.6 7.6 18 12 18" stroke="currentColor" />
+      <circle cx="23" cy="19" r="3" stroke="currentColor" />
+      <path d="M23 22V28" stroke="currentColor" />
+      <path d="M20 25H26" stroke="currentColor" />
+    </svg>
+  )
+}
 import { useAuthStore } from '../../stores/authStore'
 import { motion } from 'framer-motion'
 
@@ -44,19 +91,89 @@ function IconChildren({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeW
   )
 }
 
-const sidebarLinks = [
-  { to: '/dashboard', label: 'Overzicht', Icon: IconHome },
-  { to: '/dashboard/children', label: 'Kinderen', Icon: IconChildren },
-  { to: '/dashboard/tasks', label: 'Taken', Icon: IconTasks },
-  { to: '/dashboard/schedule', label: "Schema's", Icon: IconCalendar },
-  { to: '/dashboard/tokens', label: 'Beloningen', Icon: IconTokens },
-  { to: '/dashboard/communication', label: 'Communicatie', Icon: IconCommunication },
-  { to: '/dashboard/dossier', label: 'Dossier', Icon: IconDossier },
-  { to: '/dashboard/settings', label: 'Instellingen', Icon: IconSettings },
+// Oefeningen review icoon — vinkje met vergrootglas
+function IconReview({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M6 8L8 10L11 7M15 9H26M6 16L8 18L11 15M15 17H22" stroke="currentColor" />
+      <circle cx="22" cy="24" r="4" stroke="currentColor" />
+      <path d="M25 27L28 30" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Systeem icoon — server/terminal
+function IconSystem({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <rect x="3" y="5" width="26" height="18" rx="3" stroke="currentColor" />
+      <path d="M8 27H24" stroke="currentColor" />
+      <path d="M16 23V27" stroke="currentColor" />
+      <path d="M9 12L12 15L9 18" stroke="currentColor" />
+      <path d="M15 18H22" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Geld-icoon — spaarpotje
+function IconMoney({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <circle cx="16" cy="18" r="10" stroke="currentColor" />
+      <path d="M16 8V6M13 6h6" stroke="currentColor" />
+      <path d="M13 18c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3" stroke="currentColor" />
+      <path d="M16 21v1" stroke="currentColor" />
+      <path d="M16 14v1" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Recept-icoon — kookpot
+function IconRecipe({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <path d="M6 14h20l-2 12H8L6 14z" stroke="currentColor" />
+      <path d="M4 14h24" stroke="currentColor" />
+      <path d="M11 10V7M16 10V6M21 10V8" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Afspraken-icoon — kalender met ster
+function IconAppointments({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <rect x="4" y="6" width="24" height="22" rx="3" stroke="currentColor" />
+      <path d="M4 12H28" stroke="currentColor" />
+      <path d="M10 4V8M22 4V8" stroke="currentColor" />
+      <path d="M16 19l1.5 3 3.5.5-2.5 2.5.5 3.5L16 27l-3 1.5.5-3.5L11 22.5l3.5-.5z" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+const PARENT_LINKS = [
+  { to: '/dashboard', label: 'Overzicht', Icon: IconHome, roles: ['parent', 'admin'] },
+  { to: '/dashboard/children', label: 'Kinderen', Icon: IconChildren, roles: ['parent', 'admin'] },
+  { to: '/dashboard/tasks', label: 'Taken', Icon: IconTasks, roles: ['parent', 'admin'] },
+  { to: '/dashboard/schedule', label: "Schema's", Icon: IconCalendar, roles: ['parent', 'admin'] },
+  { to: '/dashboard/appointments', label: 'Afspraken', Icon: IconAppointments, roles: ['parent', 'admin'] },
+  { to: '/dashboard/tokens', label: 'Beloningen', Icon: IconTokens, roles: ['parent', 'admin'] },
+  { to: '/dashboard/voortgang', label: 'Voortgang', Icon: IconProgress, roles: ['caregiver'] },
+  { to: '/dashboard/communication', label: 'Communicatie', Icon: IconCommunication, roles: ['parent', 'admin', 'caregiver'] },
+  { to: '/dashboard/dossier', label: 'Dossier', Icon: IconDossier, roles: ['parent', 'admin', 'caregiver'] },
+  { to: '/dashboard/hulpverleners', label: 'Hulpverleners', Icon: IconCaregivers, roles: ['parent', 'admin'] },
+  { to: '/dashboard/vaardigheden', label: 'Vaardigheden', Icon: IconSkills, roles: ['parent', 'admin'] },
+  { to: '/dashboard/social-scripts', label: 'Sociale scripts', Icon: IconSocial, roles: ['parent', 'admin'] },
+  { to: '/dashboard/exercises/review', label: 'Oef. review', Icon: IconReview, roles: ['parent', 'admin'] },
+  { to: '/dashboard/money', label: 'Spaarpotje', Icon: IconMoney, roles: ['parent', 'admin'] },
+  { to: '/dashboard/recipes', label: 'Recepten', Icon: IconRecipe, roles: ['parent', 'admin'] },
+  { to: '/dashboard/system', label: 'Systeem', Icon: IconSystem, roles: ['admin'] },
+  { to: '/dashboard/settings', label: 'Instellingen', Icon: IconSettings, roles: ['parent', 'admin'] },
 ]
 
 export function AdultLayout() {
   const { user, logout } = useAuthStore()
+  const sidebarLinks = PARENT_LINKS.filter(l => l.roles.includes(user?.role ?? ''))
   const navigate = useNavigate()
 
   const handleLogout = async () => {

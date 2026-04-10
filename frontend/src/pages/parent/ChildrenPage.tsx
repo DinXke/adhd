@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useMutation } from '@tanstack/react-query'
 import { useMyChildren, useCreateChild, useUpdateChild, useDeleteChild, ChildProfile } from '../../lib/queries'
 import { AvatarDisplay, AVATARS } from '../../components/AvatarDisplay'
+import { api } from '../../lib/api'
 
 // ── Leeftijd berekenen ─────────────────────────────────────────
 function calcAge(dateOfBirth?: string | null): string {
@@ -198,15 +200,20 @@ function ChildCard({ child, onEdit, onDelete }: {
   onDelete: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetTokens, setResetTokens] = useState(true)
+  const [resetExercises, setResetExercises] = useState(false)
+  const [resetEmotions, setResetEmotions] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+
+  const resetMutation = useMutation({
+    mutationFn: () => api.post(`/api/tokens/${child.id}/reset`, { resetTokens, resetExercises, resetEmotions }),
+    onSuccess: () => { setResetDone(true); setTimeout(() => { setShowReset(false); setResetDone(false) }, 2000) },
+  })
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-card rounded-2xl border border-border p-5 flex items-center gap-4"
-    >
+    <motion.div layout initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}>
+    <div className="bg-card rounded-2xl border border-border p-5 flex items-center gap-4">
       <div className="w-16 h-16 rounded-full bg-surface border-2 border-accent/20 flex items-center justify-center overflow-hidden flex-shrink-0">
         <AvatarDisplay avatarId={child.avatarId} avatarUrl={child.avatarUrl} name={child.name} size={56} />
       </div>
@@ -237,20 +244,21 @@ function ChildCard({ child, onEdit, onDelete }: {
           </svg>
         </button>
 
+        <button
+          onClick={() => setShowReset(!showReset)}
+          className="p-2.5 rounded-xl border border-border text-ink-muted hover:border-amber-400 hover:text-amber-600 transition-colors"
+          title="Voortgang resetten"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+        </button>
+
         {confirming ? (
           <div className="flex gap-1">
-            <button
-              onClick={() => onDelete()}
-              className="px-3 py-2 rounded-xl bg-red-500 text-white text-sm font-medium"
-            >
-              Ja, verwijder
-            </button>
-            <button
-              onClick={() => setConfirming(false)}
-              className="px-3 py-2 rounded-xl border border-border text-sm"
-            >
-              Nee
-            </button>
+            <button onClick={() => onDelete()} className="px-3 py-2 rounded-xl bg-red-500 text-white text-sm font-medium">Ja</button>
+            <button onClick={() => setConfirming(false)} className="px-3 py-2 rounded-xl border border-border text-sm">Nee</button>
           </div>
         ) : (
           <button
@@ -262,11 +270,60 @@ function ChildCard({ child, onEdit, onDelete }: {
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
               <path d="M10 11v6M14 11v6"/>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
             </svg>
           </button>
         )}
       </div>
+    </div>
+
+    {/* Reset panel */}
+    <AnimatePresence>
+      {showReset && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="overflow-hidden"
+        >
+          <div className="border border-amber-200 rounded-xl mx-1 mb-1 p-4" style={{ background: 'rgba(212,151,59,0.06)' }}>
+            <p className="font-semibold text-ink text-sm mb-3">Voortgang resetten voor {child.name}</p>
+            <div className="space-y-2 mb-4">
+              {[
+                { key: 'resetTokens', label: 'Tokens & beloningshistoriek', value: resetTokens, set: setResetTokens },
+                { key: 'resetExercises', label: 'Oefeningen & sessies', value: resetExercises, set: setResetExercises },
+                { key: 'resetEmotions', label: 'Emotie-logs', value: resetEmotions, set: setResetEmotions },
+              ].map(item => (
+                <label key={item.key} className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={item.value}
+                    onChange={e => item.set(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span className="text-sm text-ink">{item.label}</span>
+                </label>
+              ))}
+            </div>
+            {resetDone && (
+              <p className="text-sm text-green-700 mb-2 font-medium">✅ Voortgang gereset!</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => resetMutation.mutate()}
+                disabled={(!resetTokens && !resetExercises && !resetEmotions) || resetMutation.isPending}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40"
+                style={{ background: '#D4973B' }}
+              >
+                {resetMutation.isPending ? 'Resetten...' : '↺ Reset uitvoeren'}
+              </button>
+              <button onClick={() => setShowReset(false)} className="px-4 py-2 rounded-lg border border-border text-sm text-ink-muted">
+                Annuleren
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </motion.div>
   )
 }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRIP — Geen verbinding</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Quicksand', 'Baloo 2', system-ui, sans-serif;
+      background: #FDF6EC;
+      color: #3D3229;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 2rem;
+      text-align: center;
+    }
+    .icon { font-size: 80px; margin-bottom: 1.5rem; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      color: #3D3229;
+    }
+    p {
+      font-size: 1.1rem;
+      color: #8C7B6B;
+      line-height: 1.6;
+      max-width: 320px;
+      margin-bottom: 2rem;
+    }
+    button {
+      background: #E8734A;
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 16px 32px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    button:active { opacity: 0.85; transform: scale(0.97); }
+  </style>
+</head>
+<body>
+  <div class="icon">📡</div>
+  <h1>Geen internet</h1>
+  <p>Controleer je wifi of mobiele data en probeer opnieuw.</p>
+  <button onclick="window.location.reload()">Opnieuw proberen</button>
+</body>
+</html>

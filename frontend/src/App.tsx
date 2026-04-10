@@ -18,6 +18,8 @@ const FeelingsPage = lazy(() => import('./pages/child/FeelingsPage'))
 
 // Kind
 const ChildSettingsPage = lazy(() => import('./pages/child/ChildSettingsPage').then(m => ({ default: m.ChildSettingsPage })))
+const IndependencePage = lazy(() => import('./pages/child/IndependencePage').then(m => ({ default: m.IndependencePage })))
+const SocialScriptsPage = lazy(() => import('./pages/child/SocialScriptsPage').then(m => ({ default: m.SocialScriptsPage })))
 
 // Ouder/admin
 const DashboardPage = lazy(() => import('./pages/parent/DashboardPage'))
@@ -26,6 +28,22 @@ const ScheduleEditorPage = lazy(() => import('./pages/parent/ScheduleEditorPage'
 const RewardsPage = lazy(() => import('./pages/parent/RewardsPage'))
 const SettingsPage = lazy(() => import('./pages/parent/SettingsPage'))
 const ChildrenPage = lazy(() => import('./pages/parent/ChildrenPage').then(m => ({ default: m.ChildrenPage })))
+const CommunicationPage = lazy(() => import('./pages/parent/CommunicationPage').then(m => ({ default: m.CommunicationPage })))
+const DossierPage = lazy(() => import('./pages/parent/DossierPage').then(m => ({ default: m.DossierPage })))
+const InvitesPage = lazy(() => import('./pages/parent/InvitesPage').then(m => ({ default: m.InvitesPage })))
+const ProgressPage = lazy(() => import('./pages/caregiver/ProgressPage').then(m => ({ default: m.ProgressPage })))
+const IndependenceEditorPage = lazy(() => import('./pages/parent/IndependenceEditorPage').then(m => ({ default: m.IndependenceEditorPage })))
+const SocialScriptsEditorPage = lazy(() => import('./pages/parent/SocialScriptsEditorPage').then(m => ({ default: m.SocialScriptsEditorPage })))
+const ExercisesReviewPage = lazy(() => import('./pages/parent/ExercisesReviewPage').then(m => ({ default: m.ExercisesReviewPage })))
+const SystemPage = lazy(() => import('./pages/parent/SystemPage').then(m => ({ default: m.SystemPage })))
+const MoneyEditorPage = lazy(() => import('./pages/parent/MoneyEditorPage').then(m => ({ default: m.MoneyEditorPage })))
+const RecipeEditorPage = lazy(() => import('./pages/parent/RecipeEditorPage').then(m => ({ default: m.RecipeEditorPage })))
+const AppointmentsPage = lazy(() => import('./pages/parent/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })))
+const MoneyPage = lazy(() => import('./pages/child/MoneyPage').then(m => ({ default: m.MoneyPage })))
+const RecipePage = lazy(() => import('./pages/child/RecipePage').then(m => ({ default: m.RecipePage })))
+
+// Publiek
+const AcceptInvitePage = lazy(() => import('./pages/auth/AcceptInvitePage'))
 
 function PageLoading() {
   return (
@@ -61,6 +79,7 @@ export default function App() {
         <Route path="/login" element={<SelectProfile />} />
         <Route path="/login/pin/:childId" element={<PinLogin />} />
         <Route path="/login/adult" element={<AdultLogin />} />
+        <Route path="/uitnodiging/:token" element={<AcceptInvitePage />} />
 
         {/* Kind-modus */}
         <Route
@@ -77,6 +96,10 @@ export default function App() {
           <Route path="exercises" element={<ExercisesPage />} />
           <Route path="tokens" element={<TokensPage />} />
           <Route path="feelings" element={<FeelingsPage />} />
+          <Route path="vaardigheden" element={<IndependencePage />} />
+          <Route path="social" element={<SocialScriptsPage />} />
+          <Route path="geld" element={<MoneyPage />} />
+          <Route path="recepten" element={<RecipePage />} />
           <Route path="settings" element={<ChildSettingsPage />} />
         </Route>
 
@@ -92,10 +115,19 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="schedule" element={<ScheduleEditorPage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="tokens" element={<RewardsPage />} />
           <Route path="children" element={<ChildrenPage />} />
-          <Route path="communication" element={<div className="font-body text-ink-muted p-4">Communicatie — Fase 6</div>} />
-          <Route path="dossier" element={<div className="font-body text-ink-muted p-4">Dossier — Fase 6</div>} />
+          <Route path="communication" element={<CommunicationPage />} />
+          <Route path="dossier" element={<DossierPage />} />
+          <Route path="hulpverleners" element={<InvitesPage />} />
+          <Route path="voortgang" element={<ProgressPage />} />
+          <Route path="vaardigheden" element={<IndependenceEditorPage />} />
+          <Route path="social-scripts" element={<SocialScriptsEditorPage />} />
+          <Route path="exercises/review" element={<ExercisesReviewPage />} />
+          <Route path="money" element={<MoneyEditorPage />} />
+          <Route path="recipes" element={<RecipeEditorPage />} />
+          <Route path="system" element={<SystemPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

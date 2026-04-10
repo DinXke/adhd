@@ -1,0 +1,22 @@
+<div class="layout layout--quadrant">
+  <div class="columns">
+    <div class="column">
+      <span class="title title--small">{{ status_label }}</span>
+      <div class="content">
+        {% if current_title %}
+        <p style="font-size:18px;font-weight:bold;margin:8px 0">{{ current_icon }} {{ current_title }}</p>
+        <p style="font-size:13px">{{ current_time }} - {{ current_duration }} min</p>
+        {% else %}
+        <p style="font-size:14px">Geen activiteiten meer vandaag</p>
+        {% endif %}
+      </div>
+      <div class="tag_columns">
+        <span class="tag">{{ balance }} st</span>
+      </div>
+    </div>
+  </div>
+  <div class="title_bar">
+    <span class="title">GRIP</span>
+    <span class="instance">{{ child_name }}</span>
+  </div>
+</div>
