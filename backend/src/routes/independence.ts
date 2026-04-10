@@ -170,7 +170,27 @@ export async function independenceRoutes(fastify: FastifyInstance) {
     const completion = await prisma.independenceCompletion.create({
       data: { taskId: id, childId, note },
     })
-    return { completion }
+
+    // Token toekennen als er een config bestaat
+    let tokensAwarded = 0
+    const tokenConfig = await prisma.tokenConfig.findFirst({
+      where: { childId, sourceType: 'task', enabled: true },
+    })
+    if (tokenConfig && tokenConfig.tokensPerCompletion > 0) {
+      await prisma.tokenTransaction.create({
+        data: {
+          childId,
+          amount: tokenConfig.tokensPerCompletion,
+          type: 'earned',
+          sourceType: 'task',
+          sourceId: id,
+          note: `Vaardigheid: ${task.title}`,
+        },
+      })
+      tokensAwarded = tokenConfig.tokensPerCompletion
+    }
+
+    return { completion, tokensAwarded }
   })
 
   // ── GET /api/independence/:childId/history — Afgelopen 30 dagen

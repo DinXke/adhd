@@ -25,7 +25,7 @@ export function useSpeechInput(onResult: (transcript: string) => void) {
     if (!SpeechRecognition) return
 
     const recognition = new SpeechRecognition()
-    recognition.lang = 'nl-NL'
+    recognition.lang = 'nl-BE'
     recognition.interimResults = false
     recognition.maxAlternatives = 1
     recognition.continuous = false

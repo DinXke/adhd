@@ -149,6 +149,7 @@ model User {
   appointmentsAsChild      Appointment[]            @relation("AppointmentChild")
   appointmentsCreated      Appointment[]            @relation("AppointmentCreator")
   vacationPeriods          VacationPeriod[]         @relation("VacationChild")
+  childLists               ChildList[]              @relation("ChildLists")
 
   @@map("users")
 }
@@ -698,6 +699,36 @@ model Appointment {
   updatedAt       DateTime  @updatedAt
 
   @@map("appointments")
+}
+
+// ── Kind-lijstjes ─────────────────────────────────────────────
+
+model ChildList {
+  id        String   @id @default(cuid())
+  childId   String
+  child     User     @relation("ChildLists", fields: [childId], references: [id], onDelete: Cascade)
+  title     String
+  icon      String   @default("📝")
+  color     String   @default("#7BAFA3")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items     ChildListItem[]
+
+  @@map("child_lists")
+}
+
+model ChildListItem {
+  id          String    @id @default(cuid())
+  listId      String
+  list        ChildList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@map("child_list_items")
 }
 
 // ── Audit Log ─────────────────────────────────────────────────

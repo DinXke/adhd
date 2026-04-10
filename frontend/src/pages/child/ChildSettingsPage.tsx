@@ -144,7 +144,7 @@ function QuickLinks() {
     { to: '/app/vaardigheden', label: 'Mijn vaardigheden', icon: '💪', sub: 'Afvinken wat je kunt!' },
     { to: '/app/social', label: 'Sociale situaties', icon: '💬', sub: 'Oefenen met keuzes' },
     { to: '/app/geld', label: 'Mijn spaarpotje', icon: '🐷', sub: 'Geld sparen voor een doel' },
-    { to: '/app/recepten', label: 'Mijn recepten', icon: '🍳', sub: 'Stap-voor-stap koken' },
+    { to: '/app/lijstjes', label: 'Mijn lijstjes', icon: '📋', sub: 'Maak je eigen lijstjes' },
   ]
   return (
     <div className="space-y-3 mb-6">

@@ -63,7 +63,13 @@ function TtsButton({ text }: { text: string }) {
     window.speechSynthesis.cancel()
     if (speaking) { setSpeaking(false); return }
     const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'nl-NL'
+    // Prefer Flemish, fallback to Dutch
+    const voices = window.speechSynthesis.getVoices()
+    const flemish = voices.find(v => v.lang === 'nl-BE')
+    const dutch = voices.find(v => v.lang.startsWith('nl'))
+    if (flemish) utterance.voice = flemish
+    else if (dutch) utterance.voice = dutch
+    utterance.lang = 'nl-BE'
     utterance.rate = 0.9
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)

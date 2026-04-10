@@ -32,6 +32,7 @@ import { recipeRoutes } from './routes/recipes'
 import { tipsRoutes } from './routes/tips'
 import { appointmentRoutes } from './routes/appointments'
 import { vacationRoutes } from './routes/vacations'
+import { childlistRoutes } from './routes/childlists'
 import multipart from '@fastify/multipart'
 
 const app = Fastify({
@@ -114,6 +115,7 @@ async function main() {
   await app.register(tipsRoutes, { prefix: '/api/tips' })
   await app.register(appointmentRoutes, { prefix: '/api/appointments' })
   await app.register(vacationRoutes, { prefix: '/api/vacations' })
+  await app.register(childlistRoutes, { prefix: '/api/childlists' })
 
   // ── Graceful shutdown ────────────────────────────────────────
   const shutdown = async (signal: string) => {

@@ -26,7 +26,8 @@ ENV NODE_ENV=production
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl ca-certificates wget python3 make g++ git curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --global --add safe.directory /opt/adhd
 
 COPY package*.json ./
 # Native modules moeten opnieuw worden gecompileerd in de productie-image

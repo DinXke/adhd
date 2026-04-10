@@ -516,6 +516,19 @@ export function UserManagementPage() {
                           </svg>
                         )}
                       </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`${user.name} permanent verwijderen? Dit kan niet ongedaan gemaakt worden.`)) return
+                          await api.delete(`/api/users/${user.id}`)
+                          fetchUsers()
+                        }}
+                        className="p-2 rounded-lg border border-border text-ink-muted hover:border-red-400 hover:text-red-500 transition-colors"
+                        title="Permanent verwijderen"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>

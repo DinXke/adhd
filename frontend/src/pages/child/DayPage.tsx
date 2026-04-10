@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -158,6 +159,67 @@ function AppointmentCard({ item }: { item: TimelineItem }) {
   )
 }
 
+// ── Wist-je-dat feiten ────────────────────────────────────────
+const FUN_FACTS = [
+  'Een octopus heeft drie harten en blauw bloed!',
+  'Honing kan duizenden jaren goed blijven. In Egyptische graven is eetbare honing gevonden!',
+  'Een groep flamingo\'s wordt een "flamboyance" genoemd.',
+  'Bananen zijn eigenlijk bessen, maar aardbeien niet!',
+  'De Eiffeltoren kan in de zomer 15 cm hoger worden door de warmte.',
+  'Een slak kan drie jaar slapen!',
+  'Je kan geen neuzen likken... de meeste mensen proberen het nu!',
+  'Dolfijnen geven elkaar namen en roepen elkaar bij naam.',
+  'De zon is zo groot dat er 1,3 miljoen aardes in passen.',
+  'Een kolibrie kan achteruit vliegen!',
+  'Koala\'s slapen tot 22 uur per dag.',
+  'Je botgroei stopt rond je 25ste, maar je neus en oren groeien door!',
+  'Er zijn meer sterren in het heelal dan korrels zand op aarde.',
+  'Een inktvis heeft het grootste oog van alle dieren.',
+  'De kortste oorlog in de geschiedenis duurde 38 minuten.',
+  'Olifanten zijn de enige dieren die niet kunnen springen.',
+  'Een dag op Venus duurt langer dan een jaar op Venus.',
+  'Vlinders proeven met hun voeten!',
+  'Er leven meer bacterien in je mond dan er mensen op aarde zijn.',
+  'Het hart van een blauwe vinvis is zo groot als een kleine auto.',
+]
+
+function DailyFunFact() {
+  const [visible, setVisible] = useState(true)
+  const [fact] = useState(() => {
+    // Use date as seed for consistent daily fact
+    const day = new Date().toISOString().slice(0, 10)
+    const seed = day.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return FUN_FACTS[seed % FUN_FACTS.length]
+  })
+
+  if (!visible) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="mx-5 mt-3 mb-1 rounded-2xl p-4 relative"
+      style={{ background: 'linear-gradient(135deg, rgba(155,124,200,0.12), rgba(123,175,163,0.08))', border: '1.5px solid rgba(155,124,200,0.2)' }}
+    >
+      <button
+        onClick={() => setVisible(false)}
+        className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs"
+        style={{ background: 'rgba(155,124,200,0.15)', color: '#9B7CC8' }}
+      >
+        ✕
+      </button>
+      <div className="flex gap-3 items-start pr-6">
+        <span className="text-2xl flex-shrink-0">🌍</span>
+        <div>
+          <p className="font-display font-bold text-xs mb-1" style={{ color: '#9B7CC8' }}>Wist je dat?</p>
+          <p className="font-body text-sm text-ink leading-snug">{fact}</p>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ── Hoofd-component ───────────────────────────────────────────
 export default function DayPage() {
   const { user } = useAuthStore()
@@ -281,6 +343,9 @@ export default function DayPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Wist-je-dat */}
+      <DailyFunFact />
 
       {/* Tijdlijn */}
       <div className="px-5 pb-6">

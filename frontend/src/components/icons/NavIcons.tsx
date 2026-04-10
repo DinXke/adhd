@@ -76,6 +76,26 @@ export function IconEmotion({ size = 28, className = '', strokeWidth = 3 }: Icon
   )
 }
 
+// 📋 Lijstjes — Klembord met afvinklijst
+export function IconList({ size = 28, className = '', strokeWidth = 3 }: IconProps) {
+  return (
+    <svg {...iconProps(size, strokeWidth)} className={className} aria-hidden="true">
+      {/* Klembord */}
+      <path d="M8 6H24V27C24 27.6 23.6 28 23 28H9C8.4 28 8 27.6 8 27V6Z" stroke="currentColor" />
+      {/* Clip bovenaan */}
+      <path d="M12 4H20V7H12V4Z" stroke="currentColor" />
+      {/* Vinkje 1 */}
+      <path d="M11 13L13 15L17 11" stroke="currentColor" />
+      {/* Lijntje 1 */}
+      <path d="M19 13H22" stroke="currentColor" />
+      {/* Vinkje 2 */}
+      <path d="M11 19L13 21L17 17" stroke="currentColor" />
+      {/* Lijntje 2 */}
+      <path d="M19 19H22" stroke="currentColor" />
+    </svg>
+  )
+}
+
 // ⚙️ Instellingen — Tandwiel (organisch)
 export function IconSettings({ size = 28, className = '', strokeWidth = 3 }: IconProps) {
   return (

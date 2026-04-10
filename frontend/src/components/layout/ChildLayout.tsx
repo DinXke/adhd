@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { IconHome, IconExercise, IconTokens, IconEmotion } from '../icons/NavIcons'
+import { IconHome, IconExercise, IconTokens, IconEmotion, IconList } from '../icons/NavIcons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
 import { PauzeOverlay } from '../PauzeOverlay'
@@ -18,6 +18,7 @@ const tabs = [
   { to: '/app/day', label: 'Mijn Dag', Icon: IconHome },
   { to: '/app/exercises', label: 'Oefenen', Icon: IconExercise },
   { to: '/app/tokens', label: 'Tokens', Icon: IconTokens },
+  { to: '/app/lijstjes', label: 'Lijstjes', Icon: IconList },
   { to: '/app/feelings', label: 'Hoe gaat het?', Icon: IconEmotion },
   { to: '/app/settings', label: 'Ik', Icon: IconSettings },
 ]

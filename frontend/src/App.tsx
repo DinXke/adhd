@@ -20,6 +20,7 @@ const FeelingsPage = lazy(() => import('./pages/child/FeelingsPage'))
 const ChildSettingsPage = lazy(() => import('./pages/child/ChildSettingsPage').then(m => ({ default: m.ChildSettingsPage })))
 const IndependencePage = lazy(() => import('./pages/child/IndependencePage').then(m => ({ default: m.IndependencePage })))
 const SocialScriptsPage = lazy(() => import('./pages/child/SocialScriptsPage').then(m => ({ default: m.SocialScriptsPage })))
+const ListsPage = lazy(() => import('./pages/child/ListsPage').then(m => ({ default: m.ListsPage })))
 
 // Ouder/admin
 const DashboardPage = lazy(() => import('./pages/parent/DashboardPage'))
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="social" element={<SocialScriptsPage />} />
           <Route path="geld" element={<MoneyPage />} />
           <Route path="recepten" element={<RecipePage />} />
+          <Route path="lijstjes" element={<ListsPage />} />
           <Route path="settings" element={<ChildSettingsPage />} />
         </Route>
 

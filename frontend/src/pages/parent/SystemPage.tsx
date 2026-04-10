@@ -311,13 +311,7 @@ export function SystemPage() {
         </div>
         <div className="flex gap-3 flex-wrap">
           <button
-            onClick={() => {
-              const iframe = document.createElement('iframe')
-              iframe.style.display = 'none'
-              iframe.src = '/api/trmnl/plugin.zip'
-              document.body.appendChild(iframe)
-              setTimeout(() => document.body.removeChild(iframe), 10000)
-            }}
+            onClick={() => { window.location.assign('/api/trmnl/plugin.zip') }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:opacity-90"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

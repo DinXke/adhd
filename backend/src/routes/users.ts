@@ -371,4 +371,32 @@ export async function userRoutes(fastify: FastifyInstance) {
 
     return { ok: true }
   })
+
+  // ── DELETE /api/users/:id — Gebruiker permanent verwijderen (admin) ─
+  fastify.delete('/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    // Prevent self-deletion
+    if (id === request.user.sub) {
+      return reply.status(400).send({ error: 'Je kunt jezelf niet verwijderen' })
+    }
+
+    const existing = await prisma.user.findUnique({ where: { id }, select: { id: true, name: true, role: true } })
+    if (!existing) return reply.status(404).send({ error: 'Gebruiker niet gevonden' })
+
+    // Delete cascade handles related data
+    await prisma.user.delete({ where: { id } })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: request.user.sub,
+        action: 'user.delete',
+        entityType: 'user',
+        entityId: id,
+        metadata: { name: existing.name, role: existing.role },
+      },
+    })
+
+    return { ok: true }
+  })
 }
