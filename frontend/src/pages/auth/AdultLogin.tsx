@@ -85,7 +85,7 @@ export default function AdultLogin() {
                 }}
                 onFocus={(e) => { e.target.style.borderColor = 'var(--accent-primary)' }}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--border-color)' }}
-                placeholder="bjorn@scheepers.one"
+                placeholder="jouw@emailadres.be"
               />
             </div>
 

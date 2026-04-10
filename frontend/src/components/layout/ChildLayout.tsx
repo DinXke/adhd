@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { IconHome, IconExercise, IconTokens, IconEmotion } from '../icons/NavIcons'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
+import { PauzeOverlay } from '../PauzeOverlay'
 
 const tabs = [
   { to: '/app/day', label: 'Mijn Dag', Icon: IconHome },
@@ -10,12 +12,44 @@ const tabs = [
 ]
 
 export function ChildLayout() {
+  const [pauseOpen, setPauseOpen] = useState(false)
+
   return (
     <div className="flex flex-col h-[100dvh] bg-surface">
       {/* Hoofd-content */}
       <main className="flex-1 overflow-y-auto overscroll-none pb-[72px]">
         <Outlet />
       </main>
+
+      {/* Floating pauze-knop — altijd zichtbaar */}
+      <motion.button
+        onClick={() => setPauseOpen(true)}
+        className="fixed z-40 flex items-center justify-center"
+        style={{
+          right: 16,
+          bottom: 84,
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          background: 'var(--accent-secondary)',
+          boxShadow: '0 4px 16px rgba(123,175,163,0.45)',
+          color: 'white',
+          fontSize: 22,
+          border: 'none',
+          cursor: 'pointer',
+        }}
+        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.08 }}
+        aria-label="Pauze — kalmeerscherm openen"
+        title="Pauze"
+      >
+        🤲
+      </motion.button>
+
+      {/* Pauze-overlay */}
+      <AnimatePresence>
+        {pauseOpen && <PauzeOverlay onClose={() => setPauseOpen(false)} />}
+      </AnimatePresence>
 
       {/* Bottom navigation */}
       <nav

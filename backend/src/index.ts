@@ -12,6 +12,8 @@ import { userRoutes } from './routes/users'
 import { scheduleRoutes } from './routes/schedules'
 import { taskRoutes } from './routes/tasks'
 import { tokenRoutes } from './routes/tokens'
+import { emotionRoutes } from './routes/emotions'
+import { tokenSettingsRoutes, getExtraAllowedOrigins } from './routes/settings'
 
 const app = Fastify({
   logger: {
@@ -70,6 +72,8 @@ async function main() {
   await app.register(scheduleRoutes, { prefix: '/api/schedules' })
   await app.register(taskRoutes, { prefix: '/api/tasks' })
   await app.register(tokenRoutes, { prefix: '/api/tokens' })
+  await app.register(emotionRoutes, { prefix: '/api/emotions' })
+  await app.register(tokenSettingsRoutes, { prefix: '/api/admin/settings' })
 
   // ── Graceful shutdown ────────────────────────────────────────
   const shutdown = async (signal: string) => {
@@ -86,6 +90,18 @@ async function main() {
   // ── Start ────────────────────────────────────────────────────
   await redis.connect()
   await prisma.$connect()
+
+  // Extra toegestane origins laden vanuit Redis (admin kan deze aanpassen)
+  const extraOrigins = await getExtraAllowedOrigins()
+  if (extraOrigins.length > 0) {
+    const current = process.env.CORS_ORIGINS ?? ''
+    const combined = [...current.split(',').map((o) => o.trim()).filter(Boolean), ...extraOrigins]
+    process.env.CORS_ORIGINS = [...new Set(combined)].join(',')
+    app.log.info(`Extra CORS-origins geladen: ${extraOrigins.join(', ')}`)
+  }
+  // Sla de basis env-origins op als fallback bij verwijderen
+  process.env.CORS_ORIGINS_BASE = process.env.CORS_ORIGINS
+
   await app.listen({ port: 3001, host: '0.0.0.0' })
   app.log.info('GRIP backend gestart op poort 3001')
 }

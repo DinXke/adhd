@@ -21,6 +21,7 @@ const DashboardPage = lazy(() => import('./pages/parent/DashboardPage'))
 const TasksPage = lazy(() => import('./pages/parent/TasksPage'))
 const ScheduleEditorPage = lazy(() => import('./pages/parent/ScheduleEditorPage'))
 const RewardsPage = lazy(() => import('./pages/parent/RewardsPage'))
+const SettingsPage = lazy(() => import('./pages/parent/SettingsPage'))
 
 function PageLoading() {
   return (
@@ -89,7 +90,7 @@ export default function App() {
           <Route path="tokens" element={<RewardsPage />} />
           <Route path="communication" element={<div className="font-body text-ink-muted p-4">Communicatie — Fase 6</div>} />
           <Route path="dossier" element={<div className="font-body text-ink-muted p-4">Dossier — Fase 6</div>} />
-          <Route path="settings" element={<div className="font-body text-ink-muted p-4">Instellingen</div>} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
 
         {/* 404 */}

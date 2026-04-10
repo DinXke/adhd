@@ -37,6 +37,13 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       APP_URL: ${APP_URL:-http://localhost:3080}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3080}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASS: ${SEED_ADMIN_PASS:-changeme123}
+      SEED_PARENT_EMAIL: ${SEED_PARENT_EMAIL:-ouder@example.com}
+      SEED_PARENT_PASS: ${SEED_PARENT_PASS:-changeme123}
+      SEED_CHILD_NAME: ${SEED_CHILD_NAME:-Kind}
+      SEED_CHILD_EMAIL: ${SEED_CHILD_EMAIL:-kind@example.com}
+      SEED_CHILD_PIN: ${SEED_CHILD_PIN:-0000}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:

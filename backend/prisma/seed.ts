@@ -6,45 +6,52 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Database seeden...')
 
-  // Admin (Björn)
+  // Admin
+  const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com'
+  const ADMIN_PASS  = process.env.SEED_ADMIN_PASS  ?? 'changeme123'
+  const PARENT_EMAIL = process.env.SEED_PARENT_EMAIL ?? 'ouder@example.com'
+  const PARENT_PASS  = process.env.SEED_PARENT_PASS  ?? 'changeme123'
+  const CHILD_NAME   = process.env.SEED_CHILD_NAME   ?? 'Kind'
+  const CHILD_EMAIL  = process.env.SEED_CHILD_EMAIL  ?? 'kind@example.com'
+  const CHILD_PIN    = process.env.SEED_CHILD_PIN    ?? '0000'
+
   const admin = await prisma.user.upsert({
-    where: { email: 'bjorn@scheepers.one' },
+    where: { email: ADMIN_EMAIL },
     update: {},
     create: {
-      name: 'Björn',
-      email: 'bjorn@scheepers.one',
-      password: await argon2.hash('changeme123', { type: argon2.argon2id }),
+      name: 'Admin',
+      email: ADMIN_EMAIL,
+      password: await argon2.hash(ADMIN_PASS, { type: argon2.argon2id }),
       role: Role.admin,
     },
   })
   console.log('✅ Admin aangemaakt:', admin.email)
 
-  // Ouder (Anja)
+  // Ouder
   const parent = await prisma.user.upsert({
-    where: { email: 'anja@scheepers.one' },
+    where: { email: PARENT_EMAIL },
     update: {},
     create: {
-      name: 'Anja',
-      email: 'anja@scheepers.one',
-      password: await argon2.hash('changeme123', { type: argon2.argon2id }),
+      name: 'Ouder',
+      email: PARENT_EMAIL,
+      password: await argon2.hash(PARENT_PASS, { type: argon2.argon2id }),
       role: Role.parent,
     },
   })
   console.log('✅ Ouder aangemaakt:', parent.email)
 
-  // Kind (Julie)
+  // Kind
   const child = await prisma.user.upsert({
-    where: { email: 'julie@scheepers.one' },
+    where: { email: CHILD_EMAIL },
     update: {},
     create: {
-      name: 'Julie',
-      email: 'julie@scheepers.one',
-      pin: await argon2.hash('1234', { type: argon2.argon2id }),
+      name: CHILD_NAME,
+      email: CHILD_EMAIL,
+      pin: await argon2.hash(CHILD_PIN, { type: argon2.argon2id }),
       role: Role.child,
-      avatarUrl: '/avatars/julie.svg',
     },
   })
-  console.log('✅ Kind aangemaakt:', child.name, '(PIN: 1234)')
+  console.log('✅ Kind aangemaakt:', child.name, `(PIN: ${CHILD_PIN})`)
 
   // Standaard token-configs voor Julie (globale configs, sourceId = null)
   const defaultConfigs = [
@@ -197,9 +204,9 @@ async function main() {
   console.log('✅ Voorbeeldtaken aangemaakt')
 
   console.log('\n🎉 Seed voltooid!')
-  console.log('   Admin: bjorn@scheepers.one / changeme123')
-  console.log('   Ouder: anja@scheepers.one / changeme123')
-  console.log('   Kind:  Julie (PIN: 1234)')
+  console.log(`   Admin: ${ADMIN_EMAIL} / ${ADMIN_PASS}`)
+  console.log(`   Ouder: ${PARENT_EMAIL} / ${PARENT_PASS}`)
+  console.log(`   Kind:  ${CHILD_NAME} (PIN: ${CHILD_PIN})`)
 }
 
 main()

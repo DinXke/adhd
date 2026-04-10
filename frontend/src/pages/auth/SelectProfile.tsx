@@ -17,6 +17,7 @@ interface ChildProfile {
 
 export default function SelectProfile() {
   const [children, setChildren] = useState<ChildProfile[]>([])
+  const [brokenAvatars, setBrokenAvatars] = useState<Set<string>>(new Set())
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -64,8 +65,13 @@ export default function SelectProfile() {
               className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
               style={{ background: 'var(--bg-surface)' }}
             >
-              {child.avatarUrl ? (
-                <img src={child.avatarUrl} alt={child.name} className="w-full h-full rounded-full object-cover" />
+              {child.avatarUrl && !brokenAvatars.has(child.id) ? (
+                <img
+                  src={child.avatarUrl}
+                  alt={child.name}
+                  className="w-full h-full rounded-full object-cover"
+                  onError={() => setBrokenAvatars((s) => new Set([...s, child.id]))}
+                />
               ) : (
                 <span>🧒</span>
               )}
