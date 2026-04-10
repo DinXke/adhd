@@ -104,7 +104,6 @@ export default function App() {
           <Route path="vaardigheden" element={<IndependencePage />} />
           <Route path="social" element={<SocialScriptsPage />} />
           <Route path="geld" element={<MoneyPage />} />
-          <Route path="recepten" element={<RecipePage />} />
           <Route path="lijstjes" element={<ListsPage />} />
           <Route path="settings" element={<ChildSettingsPage />} />
         </Route>

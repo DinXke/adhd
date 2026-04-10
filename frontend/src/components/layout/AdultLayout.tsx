@@ -215,7 +215,7 @@ const PARENT_LINKS = [
   { to: '/dashboard/social-scripts', label: 'Sociale scripts', Icon: IconSocial, roles: ['parent', 'admin'] },
   { to: '/dashboard/exercises/review', label: 'Oef. review', Icon: IconReview, roles: ['parent', 'admin'] },
   { to: '/dashboard/money', label: 'Spaarpotje', Icon: IconMoney, roles: ['parent', 'admin'] },
-  { to: '/dashboard/recipes', label: 'Recepten', Icon: IconRecipe, roles: ['parent', 'admin'] },
+  { to: '/dashboard/documents', label: 'Documenten', Icon: IconDocuments, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/system', label: 'Systeem', Icon: IconSystem, roles: ['admin'] },
   { to: '/dashboard/trmnl-editor', label: 'TRMNL Editor', Icon: IconTrmnlEditor, roles: ['admin'] },
   { to: '/dashboard/users', label: 'Gebruikers', Icon: IconUsers, roles: ['admin'] },
