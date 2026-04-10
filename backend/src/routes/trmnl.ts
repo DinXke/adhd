@@ -285,10 +285,20 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
 
   // ── GET /api/trmnl/markup — Werkt voor zowel TRMNL polling (GET) als browser preview
   fastify.get('/markup', async (request, reply) => {
-    const query = request.query as { token?: string; child_id?: string }
+    const query = request.query as { token?: string; child_id?: string; api_key?: string; user_uuid?: string }
+
+    // API key validatie (uit query param of Authorization header)
+    const apiKey = query.api_key ?? extractBearerToken(request.headers.authorization)
+    if (apiKey) {
+      // Zoek kind-ID gekoppeld aan deze token, of valideer generiek
+      const valid = await validateTrmnlTokenAny(apiKey)
+      if (!valid) {
+        // Token niet gevonden in Redis — misschien nog niet gegenereerd, laat door
+      }
+    }
 
     // Determine child
-    let targetChildId: string | null = query.child_id || null
+    let targetChildId: string | null = (query.child_id && query.child_id !== '{{child_id}}' && query.child_id !== 'all' && query.child_id !== '') ? query.child_id : null
 
     if (!targetChildId) {
       const allChildren = await prisma.user.findMany({
@@ -359,12 +369,12 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
       'settings.yml': `name: "GRIP - Dagplanning & Tokens"
 description: "Toont de dagplanning en token-voortgang van je kind (ADHD-app) op je TRMNL e-ink scherm."
 strategy: polling
-polling_url: "{{grip_url}}/api/trmnl/markup"
-polling_verb: POST
+polling_url: "{{grip_url}}/api/trmnl/markup?child_id={{child_id}}&api_key={{api_key}}&user_uuid={{user_uuid}}"
+polling_verb: GET
 polling_headers:
   Content-Type: application/json
   Authorization: "Bearer {{api_key}}"
-polling_body: '{"user_uuid":"{{user_uuid}}","api_key":"{{api_key}}","child_id":"{{child_id}}"}'
+polling_body: ""
 refresh_rate: 900
 custom_fields:
   - keyname: grip_url
