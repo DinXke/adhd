@@ -43,13 +43,32 @@ export async function generateExercises(opts: {
 }): Promise<GeneratedExercise[]> {
   const client = getClient()
 
+  // Map difficulty to an effective age so content matches the child's level.
+  // difficulty 1 = childAge - 1 year (makkelijker)
+  // difficulty 2 = childAge - 0.5 year
+  // difficulty 3 = childAge (op niveau)
+  // difficulty 4 = childAge + 0.5 year
+  // difficulty 5 = childAge + 1 year
+  const ageOffsetMap: Record<number, number> = { 1: -1, 2: -0.5, 3: 0, 4: 0.5, 5: 1 }
+  const effectiveAge = opts.childAge
+    ? opts.childAge + (ageOffsetMap[opts.difficulty] ?? 0)
+    : undefined
+
+  const ageGuidance = opts.childAge
+    ? `- Leeftijd van het kind: ${opts.childAge} jaar
+- Effectieve leeftijd voor dit niveau: ${effectiveAge} jaar
+  (niveau ${opts.difficulty}/5 → ${opts.difficulty <= 2 ? 'makkelijker dan leeftijd' : opts.difficulty === 3 ? 'op leeftijdsniveau' : 'uitdagender dan leeftijd'})
+- BELANGRIJK: Pas de complexiteit, woordenschat en getallen aan voor een kind van ~${effectiveAge} jaar.
+  Niveau 1 = makkelijker (leerstof van ~1 jaar jonger), niveau 5 = uitdagender (leerstof van ~1 jaar ouder).`
+    : ''
+
   const prompt = `Je bent een oefening-generator voor kinderen met ADHD in Vlaanderen.
 
 Genereer ${opts.count} oefeningen voor:
 - Vak: ${opts.subject}
 - Thema: ${opts.theme}
 - Niveau: ${opts.difficulty}/5 (${opts.difficulty <= 2 ? 'basis' : opts.difficulty <= 3 ? 'gemiddeld' : 'gevorderd'})
-${opts.childAge ? `- Leeftijd: ${opts.childAge} jaar` : ''}
+${ageGuidance}
 ${opts.recentErrors?.length ? `- Vermijd deze fouten recent gemaakt: ${opts.recentErrors.join(', ')}` : ''}
 
 REGELS:

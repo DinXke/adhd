@@ -36,6 +36,8 @@ const IndependenceEditorPage = lazy(() => import('./pages/parent/IndependenceEdi
 const SocialScriptsEditorPage = lazy(() => import('./pages/parent/SocialScriptsEditorPage').then(m => ({ default: m.SocialScriptsEditorPage })))
 const ExercisesReviewPage = lazy(() => import('./pages/parent/ExercisesReviewPage').then(m => ({ default: m.ExercisesReviewPage })))
 const SystemPage = lazy(() => import('./pages/parent/SystemPage').then(m => ({ default: m.SystemPage })))
+const UserManagementPage = lazy(() => import('./pages/parent/UserManagementPage').then(m => ({ default: m.UserManagementPage })))
+const HelpPage = lazy(() => import('./pages/parent/HelpPage').then(m => ({ default: m.HelpPage })))
 const MoneyEditorPage = lazy(() => import('./pages/parent/MoneyEditorPage').then(m => ({ default: m.MoneyEditorPage })))
 const RecipeEditorPage = lazy(() => import('./pages/parent/RecipeEditorPage').then(m => ({ default: m.RecipeEditorPage })))
 const AppointmentsPage = lazy(() => import('./pages/parent/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })))
@@ -128,6 +130,8 @@ export default function App() {
           <Route path="money" element={<MoneyEditorPage />} />
           <Route path="recipes" element={<RecipeEditorPage />} />
           <Route path="system" element={<SystemPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="help" element={<HelpPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 

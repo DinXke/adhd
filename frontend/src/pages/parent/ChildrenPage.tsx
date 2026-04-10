@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useMutation } from '@tanstack/react-query'
 import { useMyChildren, useCreateChild, useUpdateChild, useDeleteChild, ChildProfile } from '../../lib/queries'
-import { AvatarDisplay, AVATARS } from '../../components/AvatarDisplay'
+import { AvatarDisplay, AVATARS, AVATAR_CATEGORIES } from '../../components/AvatarDisplay'
 import { api } from '../../lib/api'
 
 // ── Leeftijd berekenen ─────────────────────────────────────────
@@ -24,22 +24,22 @@ function dateToInput(iso?: string | null): string {
 function AvatarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [filter, setFilter] = useState<string>('alle')
 
-  const filtered = filter === 'alle' ? AVATARS : AVATARS.filter((a) => a.gender === filter)
+  const filtered = filter === 'alle' ? AVATARS : AVATARS.filter((a) => a.category === filter)
 
   return (
     <div>
-      <div className="flex gap-2 mb-3">
-        {['alle', 'meisje', 'jongen', 'neutraal'].map((g) => (
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {AVATAR_CATEGORIES.map((cat) => (
           <button
-            key={g}
-            onClick={() => setFilter(g)}
+            key={cat.key}
+            onClick={() => setFilter(cat.key)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              filter === g
+              filter === cat.key
                 ? 'bg-accent text-white'
                 : 'bg-surface text-ink-muted border border-border hover:border-accent'
             }`}
           >
-            {g.charAt(0).toUpperCase() + g.slice(1)}
+            {cat.emoji ? `${cat.emoji} ${cat.label}` : cat.label}
           </button>
         ))}
       </div>

@@ -139,6 +139,29 @@ function IconRecipe({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWid
   )
 }
 
+// Gebruikers-icoon — personen groep
+function IconUsers({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <circle cx="12" cy="10" r="4" stroke="currentColor" />
+      <path d="M4 26C4 21.6 7.6 18 12 18C16.4 18 20 21.6 20 26" stroke="currentColor" />
+      <circle cx="22" cy="12" r="3" stroke="currentColor" />
+      <path d="M22 18C25.3 18 28 20.7 28 24" stroke="currentColor" />
+    </svg>
+  )
+}
+
+// Help-icoon — vraagteken in cirkel
+function IconHelp({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={strokeWidth} aria-hidden="true">
+      <circle cx="16" cy="16" r="12" stroke="currentColor" />
+      <path d="M12.5 12.5C12.5 10.6 14.1 9 16 9C17.9 9 19.5 10.6 19.5 12.5C19.5 14.4 17.9 16 16 16V18" stroke="currentColor" />
+      <circle cx="16" cy="22" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
 // Afspraken-icoon — kalender met ster
 function IconAppointments({ size = 28, strokeWidth = 2.5 }: { size?: number; strokeWidth?: number }) {
   return (
@@ -168,6 +191,8 @@ const PARENT_LINKS = [
   { to: '/dashboard/money', label: 'Spaarpotje', Icon: IconMoney, roles: ['parent', 'admin'] },
   { to: '/dashboard/recipes', label: 'Recepten', Icon: IconRecipe, roles: ['parent', 'admin'] },
   { to: '/dashboard/system', label: 'Systeem', Icon: IconSystem, roles: ['admin'] },
+  { to: '/dashboard/users', label: 'Gebruikers', Icon: IconUsers, roles: ['admin'] },
+  { to: '/dashboard/help', label: 'Help', Icon: IconHelp, roles: ['parent', 'admin', 'caregiver'] },
   { to: '/dashboard/settings', label: 'Instellingen', Icon: IconSettings, roles: ['parent', 'admin'] },
 ]
 

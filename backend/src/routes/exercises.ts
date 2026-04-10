@@ -64,11 +64,27 @@ export async function exerciseRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: 'subject, theme en difficulty zijn verplicht' })
     }
 
+    // Look up child's dateOfBirth to calculate age for age-based difficulty
+    let childAge: number | undefined
+    if (childId) {
+      const child = await prisma.user.findUnique({
+        where: { id: childId },
+        select: { dateOfBirth: true },
+      })
+      if (child?.dateOfBirth) {
+        const now = new Date()
+        const dob = new Date(child.dateOfBirth)
+        const ageDiffMs = now.getTime() - dob.getTime()
+        childAge = Math.round((ageDiffMs / (365.25 * 24 * 60 * 60 * 1000)) * 10) / 10 // 1 decimal
+      }
+    }
+
     const generated = await generateExercises({
       subject,
       theme,
       difficulty: Math.min(5, Math.max(1, difficulty)),
       count: Math.min(10, count),
+      childAge,
     })
 
     // Opslaan in database

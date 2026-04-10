@@ -268,4 +268,107 @@ export async function userRoutes(fastify: FastifyInstance) {
     })
     return { users }
   })
+
+  // ── PUT /api/users/:id — Gebruiker bijwerken (admin) ─────────
+  fastify.put('/:id', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) return reply.status(404).send({ error: 'Gebruiker niet gevonden' })
+
+    const body = request.body as {
+      name?: string
+      email?: string
+      role?: Role
+      isActive?: boolean
+      gender?: string
+      dateOfBirth?: string
+    }
+
+    const data: any = {}
+    if (body.name !== undefined) data.name = body.name
+    if (body.email !== undefined) data.email = body.email?.toLowerCase().trim() || null
+    if (body.role !== undefined) data.role = body.role
+    if (body.isActive !== undefined) data.isActive = body.isActive
+    if (body.gender !== undefined) data.gender = body.gender
+    if (body.dateOfBirth !== undefined) data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true, name: true, email: true, role: true,
+        avatarUrl: true, avatarId: true, gender: true,
+        dateOfBirth: true, isActive: true,
+      },
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: request.user.sub,
+        action: 'user.update',
+        entityType: 'user',
+        entityId: id,
+        metadata: { fields: Object.keys(data) },
+      },
+    })
+
+    return updated
+  })
+
+  // ── PUT /api/users/:id/password — Wachtwoord resetten (admin) ─
+  fastify.put('/:id/password', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) return reply.status(404).send({ error: 'Gebruiker niet gevonden' })
+
+    const { password } = request.body as { password: string }
+    if (!password) return reply.status(400).send({ error: 'Wachtwoord is verplicht' })
+
+    await prisma.user.update({
+      where: { id },
+      data: { password: await hashPassword(password) },
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: request.user.sub,
+        action: 'user.password_reset',
+        entityType: 'user',
+        entityId: id,
+      },
+    })
+
+    return { ok: true }
+  })
+
+  // ── PUT /api/users/:id/pin — PIN resetten (admin) ────────────
+  fastify.put('/:id/pin', { preHandler: requireAdmin }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) return reply.status(404).send({ error: 'Gebruiker niet gevonden' })
+
+    const { pin } = request.body as { pin: string }
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return reply.status(400).send({ error: 'PIN moet 4 cijfers zijn' })
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: { pin: await hashPin(pin) },
+    })
+
+    await prisma.auditLog.create({
+      data: {
+        userId: request.user.sub,
+        action: 'user.pin_reset',
+        entityType: 'user',
+        entityId: id,
+      },
+    })
+
+    return { ok: true }
+  })
 }

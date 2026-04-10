@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useUpdateAvatar } from '../../lib/queries'
-import { AvatarDisplay, AVATARS } from '../../components/AvatarDisplay'
+import { AvatarDisplay, AVATARS, AVATAR_CATEGORIES } from '../../components/AvatarDisplay'
 import { useAccessibilityStore } from '../../stores/accessibilityStore'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -19,18 +19,16 @@ interface MyProfile {
 // ── Avatar picker voor kinderen ────────────────────────────────
 function AvatarPicker({ current, onSelect }: { current: string; onSelect: (id: string) => void }) {
   const [filter, setFilter] = useState<string>('alle')
-  const filtered = filter === 'alle' ? AVATARS : AVATARS.filter((a) => a.gender === filter)
+  const filtered = filter === 'alle' ? AVATARS : AVATARS.filter((a) => a.category === filter)
 
   return (
     <div className="space-y-4">
       {/* Filter knoppen */}
       <div className="flex gap-2 justify-center">
-        {[
-          { key: 'alle', label: 'Alle' },
-          { key: 'meisje', label: '👧 Meisje' },
-          { key: 'jongen', label: '👦 Jongen' },
-          { key: 'neutraal', label: '🧒 Neutraal' },
-        ].map((f) => (
+        {AVATAR_CATEGORIES.map((f) => ({
+          key: f.key,
+          label: f.emoji ? `${f.emoji} ${f.label}` : f.label,
+        })).map((f) => (
           <motion.button
             key={f.key}
             whileTap={{ scale: 0.95 }}

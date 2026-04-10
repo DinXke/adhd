@@ -7,6 +7,8 @@
 import { FastifyInstance } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
+import { redis } from '../lib/redis'
+import { requireParent } from '../middleware/auth'
 
 const prisma = new PrismaClient()
 
@@ -24,10 +26,20 @@ function tokenBar(current: number, target: number, maxWidth = 24): string {
 }
 
 export async function trmnlRoutes(fastify: FastifyInstance) {
+
+  // ── POST /api/trmnl/generate-token — Genereer TRMNL API token ──
+  fastify.post('/generate-token', { preHandler: requireParent }, async (request) => {
+    const { childId } = request.body as { childId: string }
+    if (!childId) throw { statusCode: 400, message: 'childId is verplicht' }
+    const token = crypto.randomBytes(16).toString('hex') // 32 hex chars
+    await redis.set(`trmnl-token:${childId}`, token)
+    return { token, childId }
+  })
+
   // ── POST /api/trmnl/markup — Markup voor TRMNL plugin ────────
-  // TRMNL stuurt POST met JSON body { user_uuid, ... }
+  // TRMNL stuurt POST met JSON body { user_uuid, api_key?, ... }
   fastify.post('/markup', async (request, reply) => {
-    const body = request.body as { user_uuid?: string }
+    const body = request.body as { user_uuid?: string; api_key?: string }
     const userUuid = body?.user_uuid
 
     // Auth via user_uuid (TRMNL identifier gekoppeld aan kind)
@@ -47,11 +59,29 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
       return buildMarkup(fallbackChild.id)
     }
 
+    // Validate api_key from body or Bearer token from Authorization header
+    const apiKey = body?.api_key ?? extractBearerToken(request.headers.authorization)
+    const storedToken = await redis.get(`trmnl-token:${device.childId}`)
+    if (storedToken && (!apiKey || apiKey !== storedToken)) {
+      return reply.status(403).send({ error: 'Ongeldig TRMNL API token' })
+    }
+
     return buildMarkup(device.childId)
   })
 
   // ── GET /api/trmnl/markup — Fallback voor browser preview ─────
   fastify.get('/markup', async (request, reply) => {
+    const { token } = request.query as { token?: string }
+
+    // When a token is configured for any child, require it
+    if (token) {
+      // Validate token against all stored trmnl-tokens
+      const valid = await validateTrmnlTokenAny(token)
+      if (!valid) {
+        return reply.status(403).send({ error: 'Ongeldig TRMNL token' })
+      }
+    }
+
     const fallbackChild = await prisma.user.findFirst({
       where: { role: 'child', isActive: true },
       select: { id: true },
@@ -59,6 +89,15 @@ export async function trmnlRoutes(fastify: FastifyInstance) {
     if (!fallbackChild) {
       return reply.type('text/html').send('<html><body style="font-family:sans-serif;padding:40px;background:#111;color:#eee"><h1>GRIP TRMNL Plugin</h1><p>Geen kind geconfigureerd. Dit endpoint wordt gebruikt door TRMNL via POST.</p></body></html>')
     }
+
+    // If a token was required but not provided, check if one is configured
+    if (!token) {
+      const storedToken = await redis.get(`trmnl-token:${fallbackChild.id}`)
+      if (storedToken) {
+        return reply.status(401).send({ error: 'Token vereist als query parameter: ?token=xxx' })
+      }
+    }
+
     const data = await buildMarkup(fallbackChild.id)
     return reply.type('text/html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>GRIP TRMNL Preview</title><style>body{margin:0;padding:20px;background:#111;color:#eee;font-family:'Inter',sans-serif}.layout{background:#fff;color:#000;padding:20px;border-radius:8px;max-width:800px;margin:0 auto}.title_bar{display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:16px;padding-top:8px}.title{font-weight:bold}.item{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee}.label{font-size:14px}.value{font-size:14px;font-weight:600}.tag_columns{display:flex;gap:8px;margin-top:12px}.tag{background:#f0f0f0;padding:2px 8px;border-radius:4px;font-size:12px}h2{color:#fff;text-align:center;margin-bottom:16px}</style></head><body><h2>GRIP TRMNL Preview (monochroom)</h2>${data.markup}<h2 style="margin-top:32px">Half Vertical</h2>${data.markup_half_vertical}<h2 style="margin-top:32px">Quadrant</h2>${data.markup_quadrant}</body></html>`)
   })
@@ -96,7 +135,8 @@ polling_url: "{{grip_url}}/api/trmnl/markup"
 polling_verb: POST
 polling_headers:
   Content-Type: application/json
-polling_body: '{"user_uuid":"{{user_uuid}}"}'
+  Authorization: "Bearer {{api_key}}"
+polling_body: '{"user_uuid":"{{user_uuid}}","api_key":"{{api_key}}"}'
 refresh_rate: 900
 custom_fields:
   - name: grip_url
@@ -110,7 +150,13 @@ custom_fields:
     type: text
     placeholder: "Je TRMNL user UUID (zie account-instellingen)"
     hint: "Wordt automatisch meegegeven, laat leeg indien onzeker"
-    required: false`,
+    required: false
+  - name: api_key
+    label: "API Key"
+    type: text
+    placeholder: "Genereer via GRIP admin → TRMNL → Token genereren"
+    hint: "Beveiligingstoken voor toegang tot de markup-API"
+    required: true`,
 
       'full.liquid': `<div class="layout">
   <div class="columns"><div class="column">
@@ -212,13 +258,34 @@ custom_fields:
   })
 }
 
+function extractBearerToken(header?: string): string | null {
+  if (!header) return null
+  const match = header.match(/^Bearer\s+(\S+)$/i)
+  return match ? match[1] : null
+}
+
+/** Check if a token matches any stored trmnl-token for any child */
+async function validateTrmnlTokenAny(token: string): Promise<boolean> {
+  // Scan Redis for trmnl-token:* keys and compare
+  let cursor = '0'
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', 'trmnl-token:*', 'COUNT', 100)
+    cursor = nextCursor
+    for (const key of keys) {
+      const stored = await redis.get(key)
+      if (stored === token) return true
+    }
+  } while (cursor !== '0')
+  return false
+}
+
 async function buildMarkup(childId: string) {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
 
   // Haal alle data tegelijk op
-  const [child, schedule, tokenData, nextReward, todayEarned, lastEmotion] = await Promise.all([
+  const [child, schedule, tokenData, allRewards, todayEarned, lastEmotion] = await Promise.all([
     prisma.user.findUnique({ where: { id: childId }, select: { name: true } }),
     prisma.schedule.findFirst({
       where: { userId: childId, dayOfWeek: now.getDay(), isActive: true },
@@ -228,9 +295,10 @@ async function buildMarkup(childId: string) {
       where: { childId },
       _sum: { amount: true },
     }),
-    prisma.reward.findFirst({
-      where: { childId: childId, isAvailable: true },
+    prisma.reward.findMany({
+      where: { childId, isAvailable: true },
       orderBy: { costTokens: 'asc' },
+      take: 5,
     }),
     prisma.tokenTransaction.aggregate({
       where: { childId, type: 'earned', createdAt: { gte: todayStart, lt: todayEnd } },
@@ -246,6 +314,7 @@ async function buildMarkup(childId: string) {
   const balance = tokenData._sum.amount ?? 0
   const earnedToday = todayEarned._sum.amount ?? 0
   const activities = schedule?.activities ?? []
+  const nextReward = allRewards[0] ?? null
 
   // Bepaal huidige activiteit
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
@@ -264,6 +333,37 @@ async function buildMarkup(childId: string) {
     great: '😄', good: '😊', okay: '😐', sad: '😢', angry: '😤',
   }
 
+  // Bouw monochrome voortgangsbalk met doelen
+  // E-ink: alleen █ ░ ▓ en ASCII-tekens
+  function rewardProgressBar(bal: number, rewards: typeof allRewards): string {
+    if (rewards.length === 0) return `⭐ ${bal} tokens`
+    const maxCost = rewards[rewards.length - 1].costTokens
+    const barWidth = 28
+    const filledWidth = Math.min(Math.round((bal / maxCost) * barWidth), barWidth)
+    let bar = ''
+    for (let i = 0; i < barWidth; i++) {
+      // Check if a reward milestone falls at this position
+      const milestone = rewards.find(r => {
+        const pos = Math.round((r.costTokens / maxCost) * barWidth)
+        return pos === i + 1
+      })
+      if (milestone) {
+        bar += bal >= milestone.costTokens ? '◆' : '◇'
+      } else {
+        bar += i < filledWidth ? '█' : '░'
+      }
+    }
+    return bar
+  }
+
+  const progressBar = rewardProgressBar(balance, allRewards)
+
+  // Doelen-legenda voor half-vertical
+  const goalsLegend = allRewards.map(r => {
+    const reached = balance >= r.costTokens
+    return `<div class="item"><span class="label">${reached ? '◆' : '◇'} ${r.title}</span><span class="value">${r.costTokens} ⭐</span></div>`
+  }).join('')
+
   // ── Full layout: Dagoverzicht ──────────────────────────────
   const activityRows = activities.slice(0, 7).map(a => {
     const [h, m] = a.startTime.split(':').map(Number)
@@ -277,10 +377,6 @@ async function buildMarkup(childId: string) {
     </div>`
   }).join('')
 
-  const nextRewardBar = nextReward
-    ? `${tokenBar(balance, nextReward.costTokens)} ${balance}/${nextReward.costTokens}`
-    : `⭐ ${balance} tokens`
-
   const markup = `<div class="layout">
   <div class="columns">
     <div class="column">
@@ -290,6 +386,7 @@ async function buildMarkup(childId: string) {
           ${activityRows || '<div class="item"><span class="label">Geen schema vandaag</span></div>'}
         </div>
       </div>
+      <div style="margin-top:8px;font-family:monospace;font-size:11px;letter-spacing:1px;color:#333">${progressBar}</div>
       <div class="tag_columns">
         <span class="tag">⭐ ${balance}</span>
         <span class="tag">${nextReward ? `Nog ${Math.max(0, nextReward.costTokens - balance)} → ${nextReward.title}` : 'Goed bezig!'}</span>
@@ -303,30 +400,21 @@ async function buildMarkup(childId: string) {
   </div>
 </div>`
 
-  // ── Half vertical: Token voortgang ──────────────────────────
+  // ── Half vertical: Token voortgang met doelen ──────────────
   const streakDays = await getStreak(childId)
   const markup_half_vertical = `<div class="layout layout--half">
   <div class="columns">
     <div class="column">
-      <span class="title title--small">⭐ Tokens</span>
+      <span class="title title--small">⭐ ${balance} tokens</span>
       <div class="content">
+        <div style="margin:8px 0;font-family:monospace;font-size:12px;letter-spacing:1px;color:#333">${progressBar}</div>
         <div class="data-list">
+          ${goalsLegend || '<div class="item"><span class="label">Geen doelen ingesteld</span></div>'}
           <div class="item">
-            <span class="label">Saldo</span>
-            <span class="value">⭐ ${balance}</span>
-          </div>
-          <div class="item">
-            <span class="label">Vandaag</span>
+            <span class="label">Vandaag verdiend</span>
             <span class="value">+${earnedToday}</span>
           </div>
-          ${nextReward ? `<div class="item">
-            <span class="label">${nextReward.title}</span>
-            <span class="value">${nextReward.costTokens} ⭐</span>
-          </div>
-          <div class="item">
-            <span class="label">${nextRewardBar}</span>
-          </div>` : ''}
-          ${streakDays > 1 ? `<div class="item"><span class="label">🔥 ${streakDays} dagen streak!</span></div>` : ''}
+          ${streakDays > 1 ? `<div class="item"><span class="label">Streak</span><span class="value">${streakDays} dagen</span></div>` : ''}
         </div>
       </div>
     </div>
