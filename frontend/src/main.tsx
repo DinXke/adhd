@@ -12,7 +12,24 @@ initAccessibility()
 // Service Worker registreren voor PWA + push
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+      .then(reg => {
+        // Force update check
+        reg.update().catch(() => {})
+        // Auto-activate new SW without waiting for tab close
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing
+          if (newSW) {
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'activated') {
+                // New SW active — reload to use it
+                window.location.reload()
+              }
+            })
+          }
+        })
+      })
+      .catch(() => {})
   })
 }
 

@@ -1,5 +1,5 @@
 // GRIP Service Worker — Push notificaties + offline cache
-const CACHE_NAME = 'grip-v3'
+const CACHE_NAME = 'grip-v4'
 const OFFLINE_URL = '/offline.html'
 
 // App shell bestanden die altijd gecached worden
@@ -31,12 +31,15 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Binary downloads: laat de browser het zelf afhandelen (geen service worker)
-  if (url.pathname.includes('/plugin.zip') ||
+  // NOOIT intercepten: binary downloads, zip, ics, backups, file downloads
+  if (url.pathname.includes('.zip') ||
+      url.pathname.includes('.ics') ||
       url.pathname.includes('/download/') ||
-      url.pathname.includes('/feed.ics') ||
-      url.pathname.includes('/backups/')) {
-    return // Don't intercept — let browser handle natively
+      url.pathname.includes('/backups/') ||
+      url.pathname.includes('/plugin') ||
+      request.headers.get('accept')?.includes('application/zip') ||
+      request.headers.get('accept')?.includes('application/octet-stream')) {
+    return // Browser handles natively — NO respondWith
   }
 
   // API requests: altijd network, toon offline pagina bij falen

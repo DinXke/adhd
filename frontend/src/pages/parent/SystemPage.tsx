@@ -313,19 +313,27 @@ export function SystemPage() {
           <button
             onClick={async () => {
               try {
-                const response = await fetch('/api/trmnl/plugin.zip')
+                // Bypass service worker via cache: 'no-store'
+                const response = await fetch('/api/trmnl/plugin.zip', { cache: 'no-store' })
                 if (!response.ok) throw new Error('Download mislukt')
                 const blob = await response.blob()
-                const url = window.URL.createObjectURL(blob)
-                const link = document.createElement('a')
-                link.href = url
-                link.download = 'grip-trmnl-plugin.zip'
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-                window.URL.revokeObjectURL(url)
+                const blobUrl = URL.createObjectURL(blob)
+                // Use a temporary link with download attribute
+                const a = document.createElement('a')
+                a.style.display = 'none'
+                a.href = blobUrl
+                a.download = 'grip-trmnl-plugin.zip'
+                a.setAttribute('type', 'application/zip')
+                document.body.appendChild(a)
+                a.click()
+                // Cleanup after delay (Android needs time)
+                setTimeout(() => {
+                  document.body.removeChild(a)
+                  URL.revokeObjectURL(blobUrl)
+                }, 5000)
               } catch (e) {
-                alert('Download mislukt. Probeer opnieuw.')
+                // Fallback: open in new tab (browser will download due to Content-Disposition)
+                window.open('/api/trmnl/plugin.zip', '_blank')
               }
             }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:opacity-90"
