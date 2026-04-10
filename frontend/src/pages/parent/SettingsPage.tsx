@@ -11,6 +11,7 @@ import { useHaStatus, useHaTest } from '../../lib/queries'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { AvatarDisplay } from '../../components/AvatarDisplay'
 import { useQuery } from '@tanstack/react-query'
+import { useAccessibilityStore, ADULT_THEMES, type AdultTheme } from '../../stores/accessibilityStore'
 
 // ── Kind-selector (sticky bovenaan) ──────────────────────────
 function ChildSelector({ children, childId, onChange }: {
@@ -151,6 +152,37 @@ function HaRow() {
   )
 }
 
+// ── Thema-keuze (ouder) ──────────────────────────────────────
+function ThemeRow() {
+  const { adultTheme, setAdultTheme } = useAccessibilityStore()
+  return (
+    <div className="p-3 rounded-xl bg-surface space-y-2">
+      <div className="flex items-center gap-3">
+        <span className="text-xl">🎨</span>
+        <div>
+          <p className="font-semibold text-ink text-sm">Thema</p>
+          <p className="text-xs text-ink-muted">Kies je weergave</p>
+        </div>
+      </div>
+      <div className="flex gap-2 ml-9">
+        {ADULT_THEMES.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setAdultTheme(t.key as AdultTheme)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+              adultTheme === t.key
+                ? 'bg-accent text-white border-2 border-accent'
+                : 'bg-card border-2 border-border text-ink-muted'
+            }`}
+          >
+            <span>{t.emoji}</span> {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Domeinen (compact) ───────────────────────────────────────
 function DomainsRow() {
   const navigate = useNavigate()
@@ -262,6 +294,7 @@ export default function SettingsPage() {
 
         {/* ── App & systeem ────────────────────────────── */}
         <Category title="App & systeem" icon="⚙️">
+          <ThemeRow />
           <PushRow />
           <HaRow />
           {isAdmin && <DomainsRow />}

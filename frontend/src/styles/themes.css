@@ -1,0 +1,90 @@
+/* ══════════════════════════════════════════════════════════════
+   Extra thema's — Kind (3) + Ouder (2)
+   Geactiveerd via data-child-theme / data-adult-theme op <html>
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Kind: Oceaan Avontuur 🐬 ─────────────────────────────── */
+[data-theme="child"][data-child-theme="oceaan"] {
+  --bg-primary:       #E8F4F8;
+  --bg-card:          #F0F8FA;
+  --bg-surface:       #D4EBF2;
+  --accent-primary:   #2E8BC0;
+  --accent-secondary: #36B5A0;
+  --accent-token:     #F2C94C;
+  --accent-success:   #36B5A0;
+  --accent-warning:   #E8A838;
+  --accent-danger:    #D4645C;
+  --text-primary:     #1A3A4A;
+  --text-muted:       #5A7A8A;
+  --border-color:     rgba(46, 139, 192, 0.12);
+  --hint-color:       #7EC8E3;
+  --accent-warm:      #2E8BC0;
+  --accent-calm:      #36B5A0;
+  --accent-forest:    #36B5A0;
+  --card-border:      2px solid rgba(46, 139, 192, 0.1);
+  --active-glow:      0 0 0 3px rgba(46, 139, 192, 0.15);
+}
+
+/* ── Kind: Jungle Safari 🦁 ───────────────────────────────── */
+[data-theme="child"][data-child-theme="jungle"] {
+  --bg-primary:       #F5F0E1;
+  --bg-card:          #FAF6EA;
+  --bg-surface:       #E8DFC8;
+  --accent-primary:   #8B6914;
+  --accent-secondary: #5B8C5A;
+  --accent-token:     #F2C94C;
+  --accent-success:   #5B8C5A;
+  --accent-warning:   #D4973B;
+  --accent-danger:    #C45D4C;
+  --text-primary:     #3D2E1A;
+  --text-muted:       #7A6B52;
+  --border-color:     rgba(139, 105, 20, 0.12);
+  --hint-color:       #B8D4A8;
+  --accent-warm:      #D4973B;
+  --accent-calm:      #5B8C5A;
+  --accent-forest:    #5B8C5A;
+  --card-border:      2px solid rgba(139, 105, 20, 0.1);
+  --active-glow:      0 0 0 3px rgba(139, 105, 20, 0.15);
+}
+
+/* ── Kind: Ruimte Ontdekker 🚀 ────────────────────────────── */
+[data-theme="child"][data-child-theme="ruimte"] {
+  --bg-primary:       #1C1B2E;
+  --bg-card:          #252440;
+  --bg-surface:       #2E2D4A;
+  --accent-primary:   #7B68EE;
+  --accent-secondary: #00CED1;
+  --accent-token:     #FFD700;
+  --accent-success:   #50C878;
+  --accent-warning:   #FFA500;
+  --accent-danger:    #FF6B6B;
+  --text-primary:     #E8E6F0;
+  --text-muted:       #9998B0;
+  --border-color:     rgba(123, 104, 238, 0.15);
+  --hint-color:       #87CEEB;
+  --accent-warm:      #7B68EE;
+  --accent-calm:      #00CED1;
+  --accent-forest:    #50C878;
+  --card-border:      2px solid rgba(123, 104, 238, 0.12);
+  --active-glow:      0 0 0 3px rgba(123, 104, 238, 0.2);
+}
+
+/* ── Ouder: Donker Modus 🌙 ──────────────────────────────── */
+[data-theme="adult"][data-adult-theme="dark"] {
+  --bg-primary:       #1A1814;
+  --bg-card:          #242220;
+  --bg-surface:       #2E2C28;
+  --bg-sidebar:       #121110;
+  --bg-sidebar-hover: #1E1C1A;
+  --accent-primary:   #D4973B;
+  --accent-secondary: #7BAFA3;
+  --accent-token:     #F2C94C;
+  --accent-success:   #6BA368;
+  --accent-warning:   #D4973B;
+  --accent-danger:    #D4645C;
+  --text-primary:     #E8E0D6;
+  --text-muted:       #9A8E82;
+  --border-color:     rgba(232, 224, 214, 0.1);
+  --card-border:      1px solid rgba(232, 224, 214, 0.1);
+  --active-glow:      0 0 0 3px rgba(212, 151, 59, 0.2);
+}

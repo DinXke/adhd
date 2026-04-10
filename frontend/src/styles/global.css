@@ -5,6 +5,7 @@
 
 @import './theme-child.css';
 @import './theme-adult.css';
+@import './themes.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

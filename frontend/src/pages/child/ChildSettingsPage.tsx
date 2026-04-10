@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { useUpdateAvatar } from '../../lib/queries'
 import { AvatarDisplay, AVATARS, AVATAR_CATEGORIES } from '../../components/AvatarDisplay'
-import { useAccessibilityStore } from '../../stores/accessibilityStore'
+import { useAccessibilityStore, CHILD_THEMES, type ChildTheme } from '../../stores/accessibilityStore'
 import { useAuthStore } from '../../stores/authStore'
 
 interface MyProfile {
@@ -78,7 +78,7 @@ function AvatarPicker({ current, onSelect }: { current: string; onSelect: (id: s
 
 // ── Toegankelijkheid toggle ────────────────────────────────────
 function AccessibilityPanel() {
-  const { dyslexicFont, largeText, highContrast, setDyslexicFont, setLargeText, setHighContrast } = useAccessibilityStore()
+  const { dyslexicFont, largeText, highContrast, childTheme, setDyslexicFont, setLargeText, setHighContrast, setChildTheme } = useAccessibilityStore()
 
   const toggles = [
     {
@@ -109,6 +109,29 @@ function AccessibilityPanel() {
       <h2 className="font-display font-bold text-lg text-[var(--text-primary)] mb-4 text-center">
         Leesinstellingen
       </h2>
+      {/* Thema-keuze */}
+      <p className="font-display font-bold text-[var(--text-primary)] text-sm mb-3 mt-2">Kies een thema</p>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {CHILD_THEMES.map(t => (
+          <motion.button
+            key={t.key}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setChildTheme(t.key as ChildTheme)}
+            className="p-3 rounded-2xl text-left transition-all"
+            style={{
+              background: childTheme === t.key ? 'var(--accent-primary)' : 'var(--bg-surface)',
+              border: childTheme === t.key ? '2px solid var(--accent-primary)' : '2px solid transparent',
+            }}
+          >
+            <span className="text-2xl block mb-1">{t.emoji}</span>
+            <p className="font-display font-bold text-xs" style={{ color: childTheme === t.key ? '#fff' : 'var(--text-primary)' }}>{t.label}</p>
+            <p className="text-[10px]" style={{ color: childTheme === t.key ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>{t.desc}</p>
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Leeshulp toggles */}
+      <p className="font-display font-bold text-[var(--text-primary)] text-sm mb-3">Leeshulp</p>
       <div className="space-y-3">
         {toggles.map(t => (
           <div key={t.label} className="flex items-center gap-3">
