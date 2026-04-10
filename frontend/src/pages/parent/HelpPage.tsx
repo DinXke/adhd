@@ -236,7 +236,7 @@ export function HelpPage() {
           suggesties of bugs via GitHub.
         </p>
         <a
-          href="https://github.com/bjornscheepers/julieapp/issues"
+          href="https://github.com/dinxke/adhd/issues"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-ink hover:border-accent hover:text-accent transition-colors"

@@ -360,7 +360,7 @@ export function SystemPage() {
             { label: 'Versie', value: '1.0.0' },
             { label: 'Licentie', value: 'Privégebruik (familie Scheepers)' },
             { label: 'Methodologie', value: 'Barkley External Executive Function' },
-            { label: 'GitHub', value: 'bjornscheepers/julieapp' },
+            { label: 'GitHub', value: 'dinxke/adhd' },
           ].map(({ label, value }) => (
             <div key={label} className="flex gap-4">
               <span className="text-ink-muted w-28 flex-shrink-0">{label}</span>
