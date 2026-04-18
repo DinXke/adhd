@@ -120,10 +120,20 @@ export default function PinLogin() {
         ))}
       </motion.div>
 
+      {/* Screenreader live-regio voor PIN-voortgang */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {pin.length} van 4 cijfers ingevoerd
+      </div>
+
       {/* Foutmelding — hint-blauw, niet rood */}
       <AnimatePresence>
         {error && (
           <motion.p
+            role="alert"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
@@ -144,6 +154,7 @@ export default function PinLogin() {
             <motion.button
               key={digit}
               onClick={() => handleDigit(digit)}
+              aria-label={digit === '←' ? 'Wis laatste cijfer' : undefined}
               className="aspect-square rounded-[20px] font-display text-2xl font-bold text-ink flex items-center justify-center"
               style={{
                 background: 'var(--bg-card)',
@@ -154,7 +165,7 @@ export default function PinLogin() {
               whileHover={{ backgroundColor: 'var(--bg-surface)' }}
             >
               {digit === '←' ? (
-                <svg width="24" height="24" viewBox="0 0 32 32" fill="none" strokeWidth={3} strokeLinecap="round">
+                <svg width="24" height="24" viewBox="0 0 32 32" fill="none" strokeWidth={3} strokeLinecap="round" aria-hidden="true">
                   <path d="M20 8L10 16L20 24M10 16H26" stroke="currentColor" />
                 </svg>
               ) : digit}
