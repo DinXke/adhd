@@ -66,6 +66,7 @@ export function TtsButton({ text, size = 36, className = '' }: TtsButtonProps) {
       type="button"
       whileTap={{ scale: 0.9 }}
       onClick={speak}
+      aria-label={speaking ? 'Stop voorlezen' : 'Voorlezen'}
       title={speaking ? 'Stop voorlezen' : 'Voorlezen'}
       className={`rounded-full flex items-center justify-center ${className}`}
       style={{
