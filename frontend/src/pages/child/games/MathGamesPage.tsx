@@ -2880,7 +2880,7 @@ function Maaltafels({ onBack, difficulty }: GameProps) {
       </div>
 
       {/* Actieknoppen */}
-      <div className="relative z-10 px-5 pb-8 pt-2 flex gap-3 flex-shrink-0">
+      <div className="relative z-10 px-5 pb-24 pt-2 flex gap-3 flex-shrink-0">
         <motion.button
           onClick={handleSkip}
           disabled={!!feedback}
